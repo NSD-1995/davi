@@ -1,0 +1,157 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum UserStatus {
+  ACTIVE
+  INACTIVE
+  SUSPENDED
+}
+
+enum Gender {
+  MALE
+  FEMALE
+  OTHER
+}
+
+enum StudentStatus {
+  ACTIVE
+  INACTIVE
+  GRADUATED
+}
+
+enum TeacherStatus {
+  ACTIVE
+  INACTIVE
+  ON_LEAVE
+}
+
+enum ParentStatus {
+  ACTIVE
+  INACTIVE
+}
+
+model School {
+  id         String   @id @default(uuid())
+  name       String
+  shortName  String?
+  address    String?
+  city       String?
+  country    String?  @default("Kenya")
+  phone      String?
+  email      String?
+  website    String?
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  users      User[]
+  students   Student[]
+  teachers   Teacher[]
+  parents    Parent[]
+}
+
+model Role {
+  id          String   @id @default(uuid())
+  name        String   @unique
+  description String?
+  createdAt   DateTime @default(now())
+
+  userRoles   UserRole[]
+}
+
+model User {
+  id            String      @id @default(uuid())
+  schoolId      String
+  school        School      @relation(fields: [schoolId], references: [id], onDelete: Cascade)
+  email         String      @unique
+  passwordHash  String
+  firstName     String
+  lastName      String
+  phone         String?
+  avatarUrl     String?
+  status        UserStatus  @default(ACTIVE)
+  lastLoginAt   DateTime?
+  createdAt     DateTime    @default(now())
+  updatedAt     DateTime    @updatedAt
+
+  roles         UserRole[]
+  student       Student?
+  teacher       Teacher?
+  parent        Parent?
+}
+
+model UserRole {
+  userId     String
+  roleId     String
+  assignedAt DateTime @default(now())
+
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  role       Role     @relation(fields: [roleId], references: [id], onDelete: Cascade)
+
+  @@id([userId, roleId])
+}
+
+model Student {
+  id               String         @id @default(uuid())
+  userId           String         @unique
+  schoolId         String
+  school           School         @relation(fields: [schoolId], references: [id], onDelete: Cascade)
+  user             User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  studentCode      String         @unique
+  admissionNumber  String?
+  gradeLevel       String?
+  birthDate        DateTime?
+  gender           Gender?
+  status           StudentStatus  @default(ACTIVE)
+  createdAt        DateTime       @default(now())
+
+  studentParents   StudentParent[]
+}
+
+model Teacher {
+  id             String       @id @default(uuid())
+  userId         String       @unique
+  schoolId       String
+  school         School       @relation(fields: [schoolId], references: [id], onDelete: Cascade)
+  user           User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  teacherCode    String       @unique
+  specialization String?
+  qualification  String?
+  hireDate       DateTime?
+  status         TeacherStatus @default(ACTIVE)
+  createdAt      DateTime     @default(now())
+}
+
+model Parent {
+  id                    String        @id @default(uuid())
+  userId                String        @unique
+  schoolId              String
+  school                School        @relation(fields: [schoolId], references: [id], onDelete: Cascade)
+  user                  User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  parentCode            String        @unique
+  occupation            String?
+  relationshipToStudent String?
+  status                ParentStatus  @default(ACTIVE)
+  createdAt             DateTime      @default(now())
+
+  studentParents        StudentParent[]
+}
+
+model StudentParent {
+  id                String   @id @default(uuid())
+  studentId         String
+  parentId          String
+  relationshipType  String   @default("guardian")
+  isPrimary         Boolean  @default(false)
+  createdAt         DateTime @default(now())
+
+  student           Student  @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  parent            Parent   @relation(fields: [parentId], references: [id], onDelete: Cascade)
+
+  @@unique([studentId, parentId])
+}
