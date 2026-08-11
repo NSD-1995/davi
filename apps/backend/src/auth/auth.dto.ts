@@ -1,5 +1,5 @@
 export class RegisterDto {
-  schoolId!: string;
+  schoolId?: string;
   email!: string;
   password!: string;
   firstName!: string;
@@ -7,9 +7,15 @@ export class RegisterDto {
   phone?: string;
   avatarUrl?: string;
   roles?: string[];
+  mustChangePassword?: boolean;
 }
 
 export class LoginDto {
   email!: string;
   password!: string;
+}
+
+export class ChangePasswordDto {
+  currentPassword!: string;
+  newPassword!: string;
 }

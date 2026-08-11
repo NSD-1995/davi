@@ -84,5 +84,6 @@ PostgreSQL
 
 ## Data Security
 - Enforce role-based access
+- Keep DAVI Super Admin at the platform layer and outside school ownership boundaries
 - Encrypt sensitive contact information
 - Store audit trails for important school operations

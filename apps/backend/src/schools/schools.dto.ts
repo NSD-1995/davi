@@ -7,6 +7,9 @@ export class CreateSchoolDto {
   phone?: string;
   email?: string;
   website?: string;
+  adminEmail!: string;
+  adminFirstName?: string;
+  adminLastName?: string;
 }
 
 export class UpdateSchoolDto {
@@ -18,4 +21,7 @@ export class UpdateSchoolDto {
   phone?: string;
   email?: string;
   website?: string;
+  adminEmail?: string;
+  adminFirstName?: string;
+  adminLastName?: string;
 }

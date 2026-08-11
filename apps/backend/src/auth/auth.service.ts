@@ -1,8 +1,9 @@
 import { Injectable, UnauthorizedException, BadRequestException } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
+import { Prisma } from '@prisma/client';
 import * as bcrypt from 'bcryptjs';
 import { PrismaService } from '../prisma/prisma.service';
-import { LoginDto, RegisterDto } from './auth.dto';
+import { ChangePasswordDto, LoginDto, RegisterDto } from './auth.dto';
 
 @Injectable()
 export class AuthService {
@@ -22,23 +23,43 @@ export class AuthService {
 
     const passwordHash = await bcrypt.hash(dto.password, 10);
 
-    const user = await this.prisma.user.create({
-      data: {
-        schoolId: dto.schoolId,
-        email: dto.email,
-        passwordHash,
-        firstName: dto.firstName,
-        lastName: dto.lastName,
-        phone: dto.phone,
-        avatarUrl: dto.avatarUrl,
-      },
-      include: {
-        school: true,
-        roles: { include: { role: true } },
-      },
-    });
+    const requestedRoles = dto.roles?.length ? dto.roles : ['teacher'];
+    const roles = requestedRoles.map((roleName) => roleName.toLowerCase());
 
-    const roles = dto.roles?.length ? dto.roles : ['student'];
+    if (roles.includes('super-admin') && dto.schoolId) {
+      throw new BadRequestException(
+        'DAVI Super Admin accounts are platform-level and cannot be assigned to a school.',
+      );
+    }
+
+    const baseUserData = {
+      email: dto.email,
+      passwordHash,
+      firstName: dto.firstName,
+      lastName: dto.lastName,
+      phone: dto.phone,
+      avatarUrl: dto.avatarUrl,
+      mustChangePassword: dto.mustChangePassword ?? true,
+    };
+
+    const user = dto.schoolId
+      ? await this.prisma.user.create({
+          data: {
+            ...baseUserData,
+            schoolId: dto.schoolId,
+          },
+          include: {
+            school: true,
+            roles: { include: { role: true } },
+          },
+        })
+      : await this.prisma.user.create({
+          data: baseUserData,
+          include: {
+            school: true,
+            roles: { include: { role: true } },
+          },
+        });
 
     for (const roleName of roles) {
       const role = await this.prisma.role.upsert({
@@ -69,6 +90,38 @@ export class AuthService {
       token,
       user: {
         ...user,
+        passwordHash: undefined,
+      },
+    };
+  }
+
+  async changePassword(userId: string, dto: ChangePasswordDto) {
+    const user = await this.prisma.user.findUnique({ where: { id: userId } });
+
+    if (!user) {
+      throw new UnauthorizedException('User not found');
+    }
+
+    const isCurrentPasswordValid = await bcrypt.compare(dto.currentPassword, user.passwordHash);
+
+    if (!isCurrentPasswordValid) {
+      throw new BadRequestException('Current password is incorrect');
+    }
+
+    const newPasswordHash = await bcrypt.hash(dto.newPassword, 10);
+
+    const updatedUser = await this.prisma.user.update({
+      where: { id: userId },
+      data: {
+        passwordHash: newPasswordHash,
+        mustChangePassword: false,
+      },
+    });
+
+    return {
+      message: 'Password changed successfully',
+      user: {
+        ...updatedUser,
         passwordHash: undefined,
       },
     };

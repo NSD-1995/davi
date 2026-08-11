@@ -11,6 +11,7 @@ DAVI is a school operating system designed to help institutions manage classroom
 2. School Administrators
 3. Parents / Guardians
 4. Academic Coordinators
+5. DAVI Super Administrators
 
 ## Problem Statement
 Schools currently manage attendance, homework, lesson planning, and communication through disconnected systems. This leads to delays, missed follow-up, inconsistent records, and reduced visibility.
@@ -32,6 +33,14 @@ Schools currently manage attendance, homework, lesson planning, and communicatio
 - Manage users and school structure
 - Track attendance and operational trends
 - Configure policies and alerts
+
+### DAVI Super Admin
+- Manage the platform-level administration layer for all schools
+- Create schools and activate or deactivate them
+- Manage subscriptions and school administrators
+- View platform-level analytics and operational health
+- Configure global settings and policies
+- Must not be assigned to any single school
 
 ### Parent
 - View attendance updates
@@ -57,6 +66,8 @@ Schools currently manage attendance, homework, lesson planning, and communicatio
 - Parent notification workflows
 - Role-based access control
 - Dashboard insights for administrators
+- DAVI Super Admin platform controls
+- School lifecycle and subscription management
 
 ## Functional Scope (MVP)
 - Teacher attendance management

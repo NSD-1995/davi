@@ -22,6 +22,7 @@ Application Layer
 - NestJS API
 - Authentication / Authorization
 - Business Services
+- DAVI Super Admin platform controls
 
 Data & Integration Layer
 - PostgreSQL
@@ -52,6 +53,7 @@ Teacher → Web/Mobile App → NestJS API → PostgreSQL/Redis → AI assistant 
 - Modular service boundaries
 - API-first design
 - Role-based access control
+- Platform-level DAVI Super Admin separation from school-scoped roles
 - Event-driven communication where practical
 - Reliability for daily school operations
 
