@@ -49,10 +49,17 @@ model School {
   createdAt  DateTime @default(now())
   updatedAt  DateTime @updatedAt
 
-  users      User[]
-  students   Student[]
-  teachers   Teacher[]
-  parents    Parent[]
+  users              User[]
+  profileOptions     SchoolProfileOption[]
+  userProfileOptions UserSchoolProfileOption[]
+  settings           SchoolSetting?
+  academicYears     AcademicYear[]
+  schoolClasses      SchoolClass[]
+  sections           Section[]
+  subjects           Subject[]
+  students           Student[]
+  teachers           Teacher[]
+  parents            Parent[]
 }
 
 model Role {
@@ -81,6 +88,7 @@ model User {
   updatedAt          DateTime    @updatedAt
 
   roles              UserRole[]
+  profileOptions     UserSchoolProfileOption[]
   student            Student?
   teacher            Teacher?
   parent             Parent?
@@ -95,6 +103,121 @@ model UserRole {
   role       Role     @relation(fields: [roleId], references: [id], onDelete: Cascade)
 
   @@id([userId, roleId])
+}
+
+model SchoolSetting {
+  id                  String   @id @default(uuid())
+  schoolId            String   @unique
+  school              School   @relation(fields: [schoolId], references: [id], onDelete: Cascade)
+  schoolName          String?
+  timezone            String?  @default("Africa/Nairobi")
+  language            String?  @default("en")
+  gradingSystem       String?  @default("percentage")
+  attendancePolicy    String?
+  examPolicy          String?
+  notificationEmail   String?
+  logoUrl             String?
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime @updatedAt
+}
+
+model AcademicYear {
+  id         String      @id @default(uuid())
+  schoolId   String
+  school     School      @relation(fields: [schoolId], references: [id], onDelete: Cascade)
+  name       String
+  startDate  DateTime?
+  endDate    DateTime?
+  isCurrent  Boolean     @default(false)
+  status     String      @default("ACTIVE")
+  createdAt  DateTime    @default(now())
+  updatedAt  DateTime    @updatedAt
+
+  schoolClasses SchoolClass[]
+
+  @@unique([schoolId, name])
+}
+
+model SchoolClass {
+  id             String        @id @default(uuid())
+  schoolId       String
+  school         School        @relation(fields: [schoolId], references: [id], onDelete: Cascade)
+  academicYearId String?
+  academicYear   AcademicYear? @relation(fields: [academicYearId], references: [id], onDelete: SetNull)
+  name           String
+  code           String?
+  capacity       Int?
+  status         String        @default("ACTIVE")
+  createdAt      DateTime      @default(now())
+  updatedAt      DateTime      @updatedAt
+
+  sections       Section[]
+
+  @@unique([schoolId, academicYearId, name])
+}
+
+model Section {
+  id        String      @id @default(uuid())
+  schoolId  String
+  school    School      @relation(fields: [schoolId], references: [id], onDelete: Cascade)
+  classId   String
+  schoolClass SchoolClass @relation(fields: [classId], references: [id], onDelete: Cascade)
+  name      String
+  capacity  Int?
+  status    String      @default("ACTIVE")
+  createdAt DateTime    @default(now())
+  updatedAt DateTime    @updatedAt
+
+  @@unique([classId, name])
+}
+
+model Subject {
+  id          String   @id @default(uuid())
+  schoolId    String
+  school      School   @relation(fields: [schoolId], references: [id], onDelete: Cascade)
+  name        String
+  code        String?
+  description String?
+  type        String?  @default("core")
+  status      String   @default("ACTIVE")
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@unique([schoolId, name])
+}
+
+model SchoolProfileOption {
+  id          String   @id @default(uuid())
+  schoolId    String
+  school      School   @relation(fields: [schoolId], references: [id], onDelete: Cascade)
+  key         String
+  label       String
+  type        String   @default("text")
+  description String?
+  isRequired  Boolean  @default(false)
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  userProfileOptions UserSchoolProfileOption[]
+
+  @@unique([schoolId, key])
+}
+
+model UserSchoolProfileOption {
+  id        String   @id @default(uuid())
+  userId    String
+  schoolId  String
+  optionId  String
+  value     String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user      User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  school    School  @relation(fields: [schoolId], references: [id], onDelete: Cascade)
+  option    SchoolProfileOption @relation(fields: [optionId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, optionId])
 }
 
 model Student {

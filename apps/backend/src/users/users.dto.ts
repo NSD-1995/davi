@@ -19,3 +19,8 @@ export class UpdateUserDto {
   avatarUrl?: string;
   status?: 'ACTIVE' | 'INACTIVE' | 'SUSPENDED';
 }
+
+export class AssignRoleDto {
+  roleId?: string;
+  roleName?: string;
+}

@@ -8,6 +8,12 @@ import { UsersModule } from './users/users.module';
 import { StudentsModule } from './students/students.module';
 import { TeachersModule } from './teachers/teachers.module';
 import { ParentsModule } from './parents/parents.module';
+import { SchoolSettingsModule } from './school-settings/school-settings.module';
+import { AcademicYearsModule } from './academic-years/academic-years.module';
+import { SchoolClassesModule } from './classes/classes.module';
+import { SectionsModule } from './sections/sections.module';
+import { SubjectsModule } from './subjects/subjects.module';
+import { RolesModule } from './roles/roles.module';
 
 @Module({
   imports: [
@@ -18,6 +24,12 @@ import { ParentsModule } from './parents/parents.module';
     StudentsModule,
     TeachersModule,
     ParentsModule,
+    SchoolSettingsModule,
+    AcademicYearsModule,
+    SchoolClassesModule,
+    SectionsModule,
+    SubjectsModule,
+    RolesModule,
   ],
   controllers: [AppController],
   providers: [AppService],

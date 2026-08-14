@@ -5,7 +5,13 @@ import {
 } from '@nestjs/common';
 import * as bcrypt from 'bcryptjs';
 import { PrismaService } from '../prisma/prisma.service';
-import { CreateSchoolDto, UpdateSchoolDto } from './schools.dto';
+import {
+  AddUserProfileOptionDto,
+  CreateSchoolDto,
+  CreateSchoolProfileOptionDto,
+  UpdateSchoolDto,
+  UpdateSchoolProfileOptionDto,
+} from './schools.dto';
 
 @Injectable()
 export class SchoolsService {
@@ -15,9 +21,6 @@ export class SchoolsService {
     return this.prisma.school.findMany({
       include: {
         users: true,
-        students: true,
-        teachers: true,
-        parents: true,
       },
     });
   }
@@ -27,9 +30,6 @@ export class SchoolsService {
       where: { id },
       include: {
         users: true,
-        students: true,
-        teachers: true,
-        parents: true,
       },
     });
 
@@ -142,5 +142,255 @@ export class SchoolsService {
     await this.findOne(id);
 
     return this.prisma.school.delete({ where: { id } });
+  }
+
+  async findSchoolStudents(schoolId: string) {
+    await this.findOne(schoolId);
+
+    return this.prisma.student.findMany({
+      where: { schoolId },
+      include: {
+        user: true,
+        school: true,
+        studentParents: { include: { parent: true } },
+      },
+      orderBy: { createdAt: 'asc' },
+    });
+  }
+
+  async findSchoolTeachers(schoolId: string) {
+    await this.findOne(schoolId);
+
+    return this.prisma.teacher.findMany({
+      where: { schoolId },
+      include: {
+        user: true,
+        school: true,
+      },
+      orderBy: { createdAt: 'asc' },
+    });
+  }
+
+  async findSchoolParents(schoolId: string) {
+    await this.findOne(schoolId);
+
+    return this.prisma.parent.findMany({
+      where: { schoolId },
+      include: {
+        user: true,
+        school: true,
+        studentParents: { include: { student: true } },
+      },
+      orderBy: { createdAt: 'asc' },
+    });
+  }
+
+  async findProfileOptions(schoolId: string) {
+    await this.findOne(schoolId);
+
+    return this.prisma.schoolProfileOption.findMany({
+      where: { schoolId },
+      orderBy: { createdAt: 'asc' },
+    });
+  }
+
+  async createProfileOption(schoolId: string, data: CreateSchoolProfileOptionDto) {
+    await this.findOne(schoolId);
+
+    if (!data.key?.trim()) {
+      throw new BadRequestException('Profile option key is required');
+    }
+
+    if (!data.label?.trim()) {
+      throw new BadRequestException('Profile option label is required');
+    }
+
+    return this.prisma.schoolProfileOption.upsert({
+      where: {
+        schoolId_key: {
+          schoolId,
+          key: data.key.trim(),
+        },
+      },
+      update: {
+        label: data.label.trim(),
+        type: data.type ?? 'text',
+        description: data.description ?? null,
+        isRequired: data.isRequired ?? false,
+        isActive: data.isActive ?? true,
+      },
+      create: {
+        schoolId,
+        key: data.key.trim(),
+        label: data.label.trim(),
+        type: data.type ?? 'text',
+        description: data.description ?? null,
+        isRequired: data.isRequired ?? false,
+        isActive: data.isActive ?? true,
+      },
+    });
+  }
+
+  async updateProfileOption(
+    schoolId: string,
+    optionId: string,
+    data: UpdateSchoolProfileOptionDto,
+  ) {
+    await this.findOne(schoolId);
+
+    const option = await this.prisma.schoolProfileOption.findFirst({
+      where: { id: optionId, schoolId },
+    });
+
+    if (!option) {
+      throw new NotFoundException(
+        `Profile option with id ${optionId} not found for school ${schoolId}`,
+      );
+    }
+
+    if (data.key !== undefined && !data.key.trim()) {
+      throw new BadRequestException('Profile option key cannot be empty');
+    }
+
+    return this.prisma.schoolProfileOption.update({
+      where: { id: optionId },
+      data: {
+        ...(data.key !== undefined ? { key: data.key.trim() } : {}),
+        ...(data.label !== undefined ? { label: data.label.trim() } : {}),
+        ...(data.type !== undefined ? { type: data.type } : {}),
+        ...(data.description !== undefined ? { description: data.description } : {}),
+        ...(data.isRequired !== undefined ? { isRequired: data.isRequired } : {}),
+        ...(data.isActive !== undefined ? { isActive: data.isActive } : {}),
+      },
+    });
+  }
+
+  async removeProfileOption(schoolId: string, optionId: string) {
+    await this.findOne(schoolId);
+
+    const option = await this.prisma.schoolProfileOption.findFirst({
+      where: { id: optionId, schoolId },
+    });
+
+    if (!option) {
+      throw new NotFoundException(
+        `Profile option with id ${optionId} not found for school ${schoolId}`,
+      );
+    }
+
+    return this.prisma.schoolProfileOption.delete({ where: { id: optionId } });
+  }
+
+  async findUserProfileOptions(schoolId: string, userId: string) {
+    await this.findOne(schoolId);
+
+    const user = await this.prisma.user.findFirst({
+      where: { id: userId, schoolId },
+    });
+
+    if (!user) {
+      throw new NotFoundException(`User with id ${userId} not found in school ${schoolId}`);
+    }
+
+    return this.prisma.userSchoolProfileOption.findMany({
+      where: { userId, schoolId },
+      include: { option: true },
+      orderBy: { createdAt: 'asc' },
+    });
+  }
+
+  async addUserProfileOption(schoolId: string, userId: string, data: AddUserProfileOptionDto) {
+    await this.findOne(schoolId);
+
+    const user = await this.prisma.user.findFirst({
+      where: { id: userId, schoolId },
+    });
+
+    if (!user) {
+      throw new NotFoundException(`User with id ${userId} not found in school ${schoolId}`);
+    }
+
+    let option = null;
+
+    if (data.optionId) {
+      option = await this.prisma.schoolProfileOption.findFirst({
+        where: { id: data.optionId, schoolId },
+      });
+    } else if (data.key) {
+      option = await this.prisma.schoolProfileOption.findFirst({
+        where: { schoolId, key: data.key.trim() },
+      });
+    }
+
+    if (!option) {
+      throw new NotFoundException(
+        'Profile option not found for this school. Please create the school profile option first.',
+      );
+    }
+
+    return this.prisma.userSchoolProfileOption.upsert({
+      where: {
+        userId_optionId: {
+          userId,
+          optionId: option.id,
+        },
+      },
+      update: {
+        value: data.value ?? null,
+      },
+      create: {
+        userId,
+        schoolId,
+        optionId: option.id,
+        value: data.value ?? null,
+      },
+      include: { option: true },
+    });
+  }
+
+  async removeUserProfileOption(schoolId: string, userId: string, optionId: string) {
+    await this.findOne(schoolId);
+
+    const user = await this.prisma.user.findFirst({
+      where: { id: userId, schoolId },
+    });
+
+    if (!user) {
+      throw new NotFoundException(`User with id ${userId} not found in school ${schoolId}`);
+    }
+
+    const option = await this.prisma.schoolProfileOption.findFirst({
+      where: { id: optionId, schoolId },
+    });
+
+    if (!option) {
+      throw new NotFoundException(
+        `Profile option with id ${optionId} not found for school ${schoolId}`,
+      );
+    }
+
+    const assignment = await this.prisma.userSchoolProfileOption.findUnique({
+      where: {
+        userId_optionId: {
+          userId,
+          optionId,
+        },
+      },
+    });
+
+    if (!assignment) {
+      throw new NotFoundException(
+        `User ${userId} does not have profile option ${optionId} assigned`,
+      );
+    }
+
+    return this.prisma.userSchoolProfileOption.delete({
+      where: {
+        userId_optionId: {
+          userId,
+          optionId,
+        },
+      },
+    });
   }
 }

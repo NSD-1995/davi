@@ -1,7 +1,7 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
-import { CreateUserDto, UpdateUserDto } from './users.dto';
+import { CreateUserDto, UpdateUserDto, AssignRoleDto } from './users.dto';
 
 @Injectable()
 export class UsersService {
@@ -77,5 +77,66 @@ export class UsersService {
     await this.findOne(id);
 
     return this.prisma.user.delete({ where: { id } });
+  }
+
+  async findRoles(userId: string) {
+    await this.findOne(userId);
+
+    return this.prisma.userRole.findMany({
+      where: { userId },
+      include: { role: true },
+      orderBy: { assignedAt: 'asc' },
+    });
+  }
+
+  async assignRole(userId: string, data: AssignRoleDto) {
+    await this.findOne(userId);
+
+    let role = null;
+
+    if (data.roleId) {
+      role = await this.prisma.role.findUnique({ where: { id: data.roleId } });
+    } else if (data.roleName) {
+      role = await this.prisma.role.upsert({
+        where: { name: data.roleName.toLowerCase() },
+        update: {},
+        create: { name: data.roleName.toLowerCase() },
+      });
+    }
+
+    if (!role) {
+      throw new NotFoundException('Role not found');
+    }
+
+    return this.prisma.userRole.upsert({
+      where: {
+        userId_roleId: {
+          userId,
+          roleId: role.id,
+        },
+      },
+      update: {},
+      create: {
+        userId,
+        roleId: role.id,
+      },
+      include: { role: true },
+    });
+  }
+
+  async removeRole(userId: string, roleId: string) {
+    await this.findOne(userId);
+
+    const assignment = await this.prisma.userRole.findUnique({
+      where: { userId_roleId: { userId, roleId } },
+    });
+
+    if (!assignment) {
+      throw new NotFoundException(`User ${userId} does not have role ${roleId}`);
+    }
+
+    return this.prisma.userRole.delete({
+      where: { userId_roleId: { userId, roleId } },
+    });
   }
 }

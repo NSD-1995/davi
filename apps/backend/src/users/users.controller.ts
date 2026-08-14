@@ -38,4 +38,19 @@ export class UsersController {
   remove(@Param('id') id: string) {
     return this.usersService.remove(id);
   }
+
+  @Get(':id/roles')
+  findRoles(@Param('id') id: string) {
+    return this.usersService.findRoles(id);
+  }
+
+  @Post(':id/roles')
+  addRole(@Param('id') id: string, @Body() dto: any) {
+    return this.usersService.assignRole(id, dto);
+  }
+
+  @Delete(':id/roles/:roleId')
+  removeRole(@Param('id') id: string, @Param('roleId') roleId: string) {
+    return this.usersService.removeRole(id, roleId);
+  }
 }

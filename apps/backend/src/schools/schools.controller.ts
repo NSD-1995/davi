@@ -12,7 +12,13 @@ import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { RequireRoles } from '../auth/roles.decorator';
 import { RolesGuard } from '../auth/roles.guard';
 import { SchoolsService } from './schools.service';
-import { CreateSchoolDto, UpdateSchoolDto } from './schools.dto';
+import {
+  AddUserProfileOptionDto,
+  CreateSchoolDto,
+  CreateSchoolProfileOptionDto,
+  UpdateSchoolDto,
+  UpdateSchoolProfileOptionDto,
+} from './schools.dto';
 
 @Controller('schools')
 export class SchoolsController {
@@ -43,5 +49,90 @@ export class SchoolsController {
   @Delete(':id')
   remove(@Param('id') id: string) {
     return this.schoolsService.remove(id);
+  }
+
+  @Get(':schoolId/students')
+  findSchoolStudents(@Param('schoolId') schoolId: string) {
+    return this.schoolsService.findSchoolStudents(schoolId);
+  }
+
+  @Get(':schoolId/teachers')
+  findSchoolTeachers(@Param('schoolId') schoolId: string) {
+    return this.schoolsService.findSchoolTeachers(schoolId);
+  }
+
+  @Get(':schoolId/parents')
+  findSchoolParents(@Param('schoolId') schoolId: string) {
+    return this.schoolsService.findSchoolParents(schoolId);
+  }
+
+  @Get(':schoolId/profile-options')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @RequireRoles('super-admin', 'school-admin')
+  findProfileOptions(@Param('schoolId') schoolId: string) {
+    return this.schoolsService.findProfileOptions(schoolId);
+  }
+
+  @Post(':schoolId/profile-options')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @RequireRoles('super-admin', 'school-admin')
+  createProfileOption(
+    @Param('schoolId') schoolId: string,
+    @Body() dto: CreateSchoolProfileOptionDto,
+  ) {
+    return this.schoolsService.createProfileOption(schoolId, dto);
+  }
+
+  @Patch(':schoolId/profile-options/:optionId')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @RequireRoles('super-admin', 'school-admin')
+  updateProfileOption(
+    @Param('schoolId') schoolId: string,
+    @Param('optionId') optionId: string,
+    @Body() dto: UpdateSchoolProfileOptionDto,
+  ) {
+    return this.schoolsService.updateProfileOption(schoolId, optionId, dto);
+  }
+
+  @Delete(':schoolId/profile-options/:optionId')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @RequireRoles('super-admin', 'school-admin')
+  removeProfileOption(
+    @Param('schoolId') schoolId: string,
+    @Param('optionId') optionId: string,
+  ) {
+    return this.schoolsService.removeProfileOption(schoolId, optionId);
+  }
+
+  @Get(':schoolId/users/:userId/profile-options')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @RequireRoles('super-admin', 'school-admin')
+  findUserProfileOptions(
+    @Param('schoolId') schoolId: string,
+    @Param('userId') userId: string,
+  ) {
+    return this.schoolsService.findUserProfileOptions(schoolId, userId);
+  }
+
+  @Post(':schoolId/users/:userId/profile-options')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @RequireRoles('super-admin', 'school-admin')
+  addUserProfileOption(
+    @Param('schoolId') schoolId: string,
+    @Param('userId') userId: string,
+    @Body() dto: AddUserProfileOptionDto,
+  ) {
+    return this.schoolsService.addUserProfileOption(schoolId, userId, dto);
+  }
+
+  @Delete(':schoolId/users/:userId/profile-options/:optionId')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @RequireRoles('super-admin', 'school-admin')
+  removeUserProfileOption(
+    @Param('schoolId') schoolId: string,
+    @Param('userId') userId: string,
+    @Param('optionId') optionId: string,
+  ) {
+    return this.schoolsService.removeUserProfileOption(schoolId, userId, optionId);
   }
 }
