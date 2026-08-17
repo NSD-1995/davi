@@ -1,15 +1,12 @@
 import { Module } from '@nestjs/common';
 import { JwtModule } from '@nestjs/jwt';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
-import { PermissionsGuard } from '../auth/permissions.guard';
 import { PrismaModule } from '../prisma/prisma.module';
-import { SectionsController } from './sections.controller';
-import { SectionsService } from './sections.service';
+import { PermissionsController } from './permissions.controller';
+import { PermissionsService } from './permissions.service';
 
 @Module({
   imports: [PrismaModule, JwtModule.register({ secret: process.env.JWT_SECRET || 'davi-super-secret-key', signOptions: { expiresIn: '7d' } })],
-  controllers: [SectionsController],
-  providers: [SectionsService, JwtAuthGuard, PermissionsGuard],
-  exports: [SectionsService],
+  controllers: [PermissionsController], providers: [PermissionsService, JwtAuthGuard], exports: [PermissionsService],
 })
-export class SectionsModule {}
+export class PermissionsModule {}

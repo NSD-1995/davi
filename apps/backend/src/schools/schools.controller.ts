@@ -11,6 +11,8 @@ import {
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { RequireRoles } from '../auth/roles.decorator';
 import { RolesGuard } from '../auth/roles.guard';
+import { RequirePermissions } from '../auth/permissions.decorator';
+import { PermissionsGuard } from '../auth/permissions.guard';
 import { SchoolsService } from './schools.service';
 import {
   AddUserProfileOptionDto,
@@ -67,15 +69,15 @@ export class SchoolsController {
   }
 
   @Get(':schoolId/profile-options')
-  @UseGuards(JwtAuthGuard, RolesGuard)
-  @RequireRoles('super-admin', 'school-admin')
+  @UseGuards(JwtAuthGuard, PermissionsGuard)
+  @RequirePermissions('SCHOOL_PROFILE_VIEW')
   findProfileOptions(@Param('schoolId') schoolId: string) {
     return this.schoolsService.findProfileOptions(schoolId);
   }
 
   @Post(':schoolId/profile-options')
-  @UseGuards(JwtAuthGuard, RolesGuard)
-  @RequireRoles('super-admin', 'school-admin')
+  @UseGuards(JwtAuthGuard, PermissionsGuard)
+  @RequirePermissions('SCHOOL_PROFILE_UPDATE')
   createProfileOption(
     @Param('schoolId') schoolId: string,
     @Body() dto: CreateSchoolProfileOptionDto,
@@ -84,8 +86,8 @@ export class SchoolsController {
   }
 
   @Patch(':schoolId/profile-options/:optionId')
-  @UseGuards(JwtAuthGuard, RolesGuard)
-  @RequireRoles('super-admin', 'school-admin')
+  @UseGuards(JwtAuthGuard, PermissionsGuard)
+  @RequirePermissions('SCHOOL_PROFILE_UPDATE')
   updateProfileOption(
     @Param('schoolId') schoolId: string,
     @Param('optionId') optionId: string,
@@ -95,8 +97,8 @@ export class SchoolsController {
   }
 
   @Delete(':schoolId/profile-options/:optionId')
-  @UseGuards(JwtAuthGuard, RolesGuard)
-  @RequireRoles('super-admin', 'school-admin')
+  @UseGuards(JwtAuthGuard, PermissionsGuard)
+  @RequirePermissions('SCHOOL_PROFILE_UPDATE')
   removeProfileOption(
     @Param('schoolId') schoolId: string,
     @Param('optionId') optionId: string,
@@ -105,8 +107,8 @@ export class SchoolsController {
   }
 
   @Get(':schoolId/users/:userId/profile-options')
-  @UseGuards(JwtAuthGuard, RolesGuard)
-  @RequireRoles('super-admin', 'school-admin')
+  @UseGuards(JwtAuthGuard, PermissionsGuard)
+  @RequirePermissions('SCHOOL_PROFILE_VIEW')
   findUserProfileOptions(
     @Param('schoolId') schoolId: string,
     @Param('userId') userId: string,
@@ -115,8 +117,8 @@ export class SchoolsController {
   }
 
   @Post(':schoolId/users/:userId/profile-options')
-  @UseGuards(JwtAuthGuard, RolesGuard)
-  @RequireRoles('super-admin', 'school-admin')
+  @UseGuards(JwtAuthGuard, PermissionsGuard)
+  @RequirePermissions('SCHOOL_PROFILE_UPDATE')
   addUserProfileOption(
     @Param('schoolId') schoolId: string,
     @Param('userId') userId: string,
@@ -126,8 +128,8 @@ export class SchoolsController {
   }
 
   @Delete(':schoolId/users/:userId/profile-options/:optionId')
-  @UseGuards(JwtAuthGuard, RolesGuard)
-  @RequireRoles('super-admin', 'school-admin')
+  @UseGuards(JwtAuthGuard, PermissionsGuard)
+  @RequirePermissions('SCHOOL_PROFILE_UPDATE')
   removeUserProfileOption(
     @Param('schoolId') schoolId: string,
     @Param('userId') userId: string,

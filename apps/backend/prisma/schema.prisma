@@ -57,18 +57,53 @@ model School {
   schoolClasses      SchoolClass[]
   sections           Section[]
   subjects           Subject[]
+  academicYearSubjects AcademicYearSubject[]
   students           Student[]
   teachers           Teacher[]
   parents            Parent[]
+  roles              Role[]
+  userRoles          UserRole[]
+  staff              Staff[]
 }
 
 model Role {
   id          String   @id @default(uuid())
-  name        String   @unique
+  schoolId    String?
+  school      School?  @relation(fields: [schoolId], references: [id], onDelete: Cascade)
+  name        String
+  code        String
+  description String?
+  isSystem    Boolean  @default(false)
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  userRoles       UserRole[]
+  rolePermissions RolePermission[]
+
+  @@unique([schoolId, code])
+  @@index([code])
+}
+
+model Permission {
+  id          String   @id @default(uuid())
+  code        String   @unique
+  module      String
+  action      String
   description String?
   createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
 
-  userRoles   UserRole[]
+  rolePermissions RolePermission[]
+}
+
+model RolePermission {
+  roleId       String
+  permissionId String
+  role         Role       @relation(fields: [roleId], references: [id], onDelete: Cascade)
+  permission   Permission @relation(fields: [permissionId], references: [id], onDelete: Cascade)
+
+  @@id([roleId, permissionId])
 }
 
 model User {
@@ -76,6 +111,7 @@ model User {
   schoolId           String?
   school             School?     @relation(fields: [schoolId], references: [id], onDelete: Cascade)
   email              String      @unique
+  username           String?     @unique
   passwordHash       String
   firstName          String
   lastName           String
@@ -92,15 +128,18 @@ model User {
   student            Student?
   teacher            Teacher?
   parent             Parent?
+  staff              Staff?
 }
 
 model UserRole {
   userId     String
   roleId     String
+  schoolId   String?
   assignedAt DateTime @default(now())
 
   user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   role       Role     @relation(fields: [roleId], references: [id], onDelete: Cascade)
+  school     School?  @relation(fields: [schoolId], references: [id], onDelete: Cascade)
 
   @@id([userId, roleId])
 }
@@ -134,6 +173,7 @@ model AcademicYear {
   updatedAt  DateTime    @updatedAt
 
   schoolClasses SchoolClass[]
+  academicYearSubjects AcademicYearSubject[]
 
   @@unique([schoolId, name])
 }
@@ -176,14 +216,47 @@ model Subject {
   schoolId    String
   school      School   @relation(fields: [schoolId], references: [id], onDelete: Cascade)
   name        String
-  code        String?
+  code        String
   description String?
   type        String?  @default("core")
   status      String   @default("ACTIVE")
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
+  academicYearSubjects AcademicYearSubject[]
+
   @@unique([schoolId, name])
+  @@unique([schoolId, code])
+}
+
+model Staff {
+  id          String      @id @default(uuid())
+  schoolId    String
+  userId      String      @unique
+  employeeId  String
+  joiningDate DateTime?
+  status      UserStatus  @default(ACTIVE)
+  school      School      @relation(fields: [schoolId], references: [id], onDelete: Cascade)
+  user        User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  createdAt   DateTime    @default(now())
+  updatedAt   DateTime    @updatedAt
+
+  @@unique([schoolId, employeeId])
+}
+
+model AcademicYearSubject {
+  id             String       @id @default(uuid())
+  schoolId       String
+  academicYearId String
+  subjectId      String
+  school         School       @relation(fields: [schoolId], references: [id], onDelete: Restrict)
+  academicYear   AcademicYear @relation(fields: [academicYearId], references: [id], onDelete: Restrict)
+  subject        Subject      @relation(fields: [subjectId], references: [id], onDelete: Restrict)
+  createdAt      DateTime     @default(now())
+
+  @@unique([academicYearId, subjectId])
+  @@index([schoolId])
+  @@index([subjectId])
 }
 
 model SchoolProfileOption {

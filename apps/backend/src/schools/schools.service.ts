@@ -92,11 +92,17 @@ export class SchoolsService {
       },
     });
 
-    const schoolAdminRole = await this.prisma.role.upsert({
-      where: { name: 'school-admin' },
-      update: {},
-      create: { name: 'school-admin' },
+    const schoolAdminRole = await this.prisma.role.create({
+      data: { schoolId: school.id, name: 'School Admin', code: 'SCHOOL_ADMIN', isSystem: true },
     });
+
+    const permissions = await this.prisma.permission.findMany({ select: { id: true } });
+    if (permissions.length) {
+      await this.prisma.rolePermission.createMany({
+        data: permissions.map((permission) => ({ roleId: schoolAdminRole.id, permissionId: permission.id })),
+        skipDuplicates: true,
+      });
+    }
 
     await this.prisma.userRole.upsert({
       where: {
@@ -109,6 +115,7 @@ export class SchoolsService {
       create: {
         userId: adminUser.id,
         roleId: schoolAdminRole.id,
+        schoolId: school.id,
       },
     });
 

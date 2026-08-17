@@ -97,11 +97,9 @@ export class UsersService {
     if (data.roleId) {
       role = await this.prisma.role.findUnique({ where: { id: data.roleId } });
     } else if (data.roleName) {
-      role = await this.prisma.role.upsert({
-        where: { name: data.roleName.toLowerCase() },
-        update: {},
-        create: { name: data.roleName.toLowerCase() },
-      });
+      const user = await this.prisma.user.findUnique({ where: { id: userId } });
+      const code = data.roleName.toUpperCase().replace(/[^A-Z0-9]+/g, '_');
+      role = await this.prisma.role.findFirst({ where: { schoolId: user?.schoolId ?? null, code } });
     }
 
     if (!role) {
@@ -119,6 +117,7 @@ export class UsersService {
       create: {
         userId,
         roleId: role.id,
+        schoolId: role.schoolId,
       },
       include: { role: true },
     });

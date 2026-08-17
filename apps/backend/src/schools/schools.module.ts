@@ -2,6 +2,7 @@ import { Module } from '@nestjs/common';
 import { JwtModule } from '@nestjs/jwt';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { RolesGuard } from '../auth/roles.guard';
+import { PermissionsGuard } from '../auth/permissions.guard';
 import { PrismaModule } from '../prisma/prisma.module';
 import { SchoolsController } from './schools.controller';
 import { SchoolsService } from './schools.service';
@@ -15,7 +16,7 @@ import { SchoolsService } from './schools.service';
     }),
   ],
   controllers: [SchoolsController],
-  providers: [SchoolsService, JwtAuthGuard, RolesGuard],
+  providers: [SchoolsService, JwtAuthGuard, RolesGuard, PermissionsGuard],
   exports: [SchoolsService],
 })
 export class SchoolsModule {}

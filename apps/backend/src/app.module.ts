@@ -14,6 +14,8 @@ import { SchoolClassesModule } from './classes/classes.module';
 import { SectionsModule } from './sections/sections.module';
 import { SubjectsModule } from './subjects/subjects.module';
 import { RolesModule } from './roles/roles.module';
+import { PermissionsModule } from './permissions/permissions.module';
+import { StaffModule } from './staff/staff.module';
 
 @Module({
   imports: [
@@ -30,6 +32,8 @@ import { RolesModule } from './roles/roles.module';
     SectionsModule,
     SubjectsModule,
     RolesModule,
+    PermissionsModule,
+    StaffModule,
   ],
   controllers: [AppController],
   providers: [AppService],

@@ -2,8 +2,10 @@
   "name": "@davi/backend",
   "version": "0.1.0",
   "private": true,
+  "prisma": { "seed": "node prisma/seed.js" },
   "scripts": {
     "build": "nest build",
+    "test": "npm run build && node --test test/*.test.js",
     "start": "nest start",
     "start:dev": "nest start --watch",
     "prisma:generate": "prisma generate --schema=./prisma/schema.prisma",

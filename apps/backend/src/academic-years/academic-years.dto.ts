@@ -6,6 +6,11 @@ export class CreateAcademicYearDto {
   status?: string;
 }
 
+export class AssignAcademicYearSubjectsDto {
+  schoolId!: string;
+  subjectIds!: string[];
+}
+
 export class UpdateAcademicYearDto {
   name?: string;
   startDate?: string;

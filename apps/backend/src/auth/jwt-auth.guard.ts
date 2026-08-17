@@ -2,6 +2,7 @@ import {
   CanActivate,
   ExecutionContext,
   Injectable,
+  ForbiddenException,
   UnauthorizedException,
 } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
@@ -38,13 +39,21 @@ export class JwtAuthGuard implements CanActivate {
         throw new UnauthorizedException('User not found');
       }
 
+      if (user.status !== 'ACTIVE') throw new UnauthorizedException('User account is not active');
+
+      const requestPath = req.originalUrl ?? req.url ?? '';
+      if (user.mustChangePassword && !requestPath.includes('/auth/change-password') && !requestPath.includes('/auth/me')) {
+        throw new ForbiddenException('Password change required before accessing DAVI.');
+      }
+
       req.user = {
         ...user,
-        roles: user.roles.map((userRole) => userRole.role.name),
+        roles: user.roles.flatMap((userRole) => [userRole.role.name.toLowerCase(), userRole.role.code.toLowerCase().replace(/_/g, '-')]),
       };
 
       return true;
     } catch (error) {
+      if (error instanceof ForbiddenException) throw error;
       throw new UnauthorizedException('Invalid or expired token');
     }
   }

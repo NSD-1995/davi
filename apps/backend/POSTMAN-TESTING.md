@@ -38,3 +38,19 @@ Other endpoints are currently public. The collection preserves that behavior; th
 - For onboarding, use `POST /classes/bulk` to create class groups for one academic year in one request. Enable any of `montessori` (Play School, Nursery, LKG, UKG), `primary` (1st–5th), `secondary` (6th–10th), and `seniorSecondary` (11th–12th). Send one `numberOfSections` value and every created class receives that many numbered sections. Use the normal class and section CRUD endpoints later to edit or delete a specific class or section from the dashboard.
 - Classes accept only `ACTIVE` or `INACTIVE` status. The dashboard can call `GET /classes?status=ACTIVE` for its default list and `GET /classes?status=INACTIVE` for archived classes. Inactive classes cannot receive new sections until reactivated.
 - The destructive requests are intentionally present for coverage. Run them only after dependent data checks; deleting a school cascades to its related records.
+
+## Subject management sequence
+
+Subject and academic-year subject endpoints require a school-admin JWT and are restricted to that admin's school. Run **Create Subject**, **Assign Subjects**, **Get Subjects By Academic Year**, and **Remove Subject From Academic Year** in that order. Removing an assignment leaves the master subject intact; a master subject cannot be deleted while any academic-year assignment remains. Valid subject statuses are `ACTIVE` and `INACTIVE`; valid types are `CORE`, `ELECTIVE`, and `OPTIONAL`.
+
+## Roles, permissions, and staff sequence
+
+1. Apply the roles/permissions migration and run the Prisma seed before testing.
+2. Login as the school admin; the protected `SCHOOL_ADMIN` role has full school access.
+3. Run **List Permissions**, then **Create Role** and **Update Role Permissions**.
+4. Run **Create Staff**. The response stores the one-time temporary password and staff ID in collection variables.
+5. Run **Staff Login** using the mobile username. DAVI returns `requiresPasswordChange: true` and blocks other protected features until **Change First-Time Password** succeeds.
+6. Run **Current User / Permissions** and confirm the assigned role and permission codes.
+7. Test permitted and non-permitted endpoints. Missing permissions return `403 Forbidden`, and School A users cannot manage School B paths.
+
+Staff academic-year, class, section, and subject responsibilities are intentionally separate from access roles and are not part of this workflow.

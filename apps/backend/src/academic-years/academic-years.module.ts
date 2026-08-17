@@ -2,7 +2,7 @@ import { Module } from '@nestjs/common';
 import { JwtModule } from '@nestjs/jwt';
 import { PrismaModule } from '../prisma/prisma.module';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
-import { RolesGuard } from '../auth/roles.guard';
+import { PermissionsGuard } from '../auth/permissions.guard';
 import { AcademicYearsController } from './academic-years.controller';
 import { AcademicYearsService } from './academic-years.service';
 
@@ -15,7 +15,7 @@ import { AcademicYearsService } from './academic-years.service';
     }),
   ],
   controllers: [AcademicYearsController],
-  providers: [AcademicYearsService, JwtAuthGuard, RolesGuard],
+  providers: [AcademicYearsService, JwtAuthGuard, PermissionsGuard],
   exports: [AcademicYearsService],
 })
 export class AcademicYearsModule {}
