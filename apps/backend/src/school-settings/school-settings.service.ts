@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateSchoolSettingDto, UpdateSchoolSettingDto } from './school-settings.dto';
 
@@ -6,13 +6,16 @@ import { CreateSchoolSettingDto, UpdateSchoolSettingDto } from './school-setting
 export class SchoolSettingsService {
   constructor(private readonly prisma: PrismaService) {}
 
-  findAll() {
+  findAll(schoolId: string | null) {
+    this.requireSchool(schoolId);
     return this.prisma.schoolSetting.findMany({
+      where: { schoolId },
       include: { school: true },
     });
   }
 
-  async findOne(id: string) {
+  async findOne(id: string, schoolId: string | null) {
+    this.requireSchool(schoolId);
     const setting = await this.prisma.schoolSetting.findUnique({
       where: { id },
       include: { school: true },
@@ -21,11 +24,14 @@ export class SchoolSettingsService {
     if (!setting) {
       throw new NotFoundException(`School setting with id ${id} not found`);
     }
+    if (setting.schoolId !== schoolId) throw new ForbiddenException('You can only access settings for your own school.');
 
     return setting;
   }
 
-  async findBySchoolId(schoolId: string) {
+  async findBySchoolId(schoolId: string, actorSchoolId: string | null) {
+    this.requireSchool(actorSchoolId);
+    if (schoolId !== actorSchoolId) throw new ForbiddenException('You can only access settings for your own school.');
     const setting = await this.prisma.schoolSetting.findUnique({
       where: { schoolId },
       include: { school: true },
@@ -38,12 +44,14 @@ export class SchoolSettingsService {
     return setting;
   }
 
-  async create(data: CreateSchoolSettingDto) {
+  async create(actorSchoolId: string | null, data: CreateSchoolSettingDto) {
+    this.requireSchool(actorSchoolId);
     const schoolId = data.schoolId;
 
     if (!schoolId) {
       throw new Error('schoolId is required');
     }
+    if (schoolId !== actorSchoolId) throw new ForbiddenException('You can only create settings for your own school.');
 
     const school = await this.prisma.school.findUnique({ where: { id: schoolId } });
     if (!school) {
@@ -76,8 +84,8 @@ export class SchoolSettingsService {
     });
   }
 
-  async update(id: string, data: UpdateSchoolSettingDto) {
-    await this.findOne(id);
+  async update(id: string, schoolId: string | null, data: UpdateSchoolSettingDto) {
+    await this.findOne(id, schoolId);
 
     return this.prisma.schoolSetting.update({
       where: { id },
@@ -85,9 +93,10 @@ export class SchoolSettingsService {
     });
   }
 
-  async remove(id: string) {
-    await this.findOne(id);
+  async remove(id: string, schoolId: string | null) {
+    await this.findOne(id, schoolId);
 
     return this.prisma.schoolSetting.delete({ where: { id } });
   }
+  private requireSchool(schoolId: string | null): asserts schoolId is string { if (!schoolId) throw new ForbiddenException('A school account is required.'); }
 }

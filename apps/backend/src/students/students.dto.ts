@@ -19,3 +19,17 @@ export class UpdateStudentDto {
   gender?: 'MALE' | 'FEMALE' | 'OTHER';
   status?: 'ACTIVE' | 'INACTIVE' | 'GRADUATED';
 }
+
+export class EnrollStudentDto {
+  academicYearId!: string;
+  classId!: string;
+  sectionId!: string;
+  rollNumber?: string;
+}
+
+export class UpdateStudentEnrollmentDto {
+  classId?: string;
+  sectionId?: string;
+  rollNumber?: string;
+  status?: 'ACTIVE' | 'TRANSFERRED' | 'PROMOTED' | 'WITHDRAWN';
+}

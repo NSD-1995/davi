@@ -1,0 +1,1 @@
+import Link from 'next/link'; export default function Forbidden(){return <main className="screen-center"><div className="empty"><div className="empty-icon">!</div><h1>Access denied</h1><p>You do not have permission to view this page.</p><Link className="button" href="/dashboard">Back to dashboard</Link></div></main>}

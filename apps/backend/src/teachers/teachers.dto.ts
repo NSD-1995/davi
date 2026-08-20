@@ -17,3 +17,11 @@ export class UpdateTeacherDto {
   hireDate?: string;
   status?: 'ACTIVE' | 'INACTIVE' | 'ON_LEAVE';
 }
+
+export class CreateTeacherAssignmentDto {
+  academicYearId!: string;
+  classId!: string;
+  sectionId?: string;
+  subjectId?: string;
+  isClassTeacher?: boolean;
+}

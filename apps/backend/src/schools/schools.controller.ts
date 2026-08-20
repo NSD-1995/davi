@@ -34,36 +34,50 @@ export class SchoolsController {
   }
 
   @Get()
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @RequireRoles('super-admin')
   findAll() {
     return this.schoolsService.findAll();
   }
 
   @Get(':id')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @RequireRoles('super-admin')
   findOne(@Param('id') id: string) {
     return this.schoolsService.findOne(id);
   }
 
   @Patch(':id')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @RequireRoles('super-admin')
   update(@Param('id') id: string, @Body() dto: UpdateSchoolDto) {
     return this.schoolsService.update(id, dto);
   }
 
   @Delete(':id')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @RequireRoles('super-admin')
   remove(@Param('id') id: string) {
     return this.schoolsService.remove(id);
   }
 
   @Get(':schoolId/students')
+  @UseGuards(JwtAuthGuard, PermissionsGuard)
+  @RequirePermissions('STUDENT_VIEW')
   findSchoolStudents(@Param('schoolId') schoolId: string) {
     return this.schoolsService.findSchoolStudents(schoolId);
   }
 
   @Get(':schoolId/teachers')
+  @UseGuards(JwtAuthGuard, PermissionsGuard)
+  @RequirePermissions('STAFF_VIEW')
   findSchoolTeachers(@Param('schoolId') schoolId: string) {
     return this.schoolsService.findSchoolTeachers(schoolId);
   }
 
   @Get(':schoolId/parents')
+  @UseGuards(JwtAuthGuard, PermissionsGuard)
+  @RequirePermissions('PARENT_VIEW')
   findSchoolParents(@Param('schoolId') schoolId: string) {
     return this.schoolsService.findSchoolParents(schoolId);
   }

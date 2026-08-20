@@ -13,10 +13,18 @@
     { "key": "staffId", "value": "" },
     { "key": "staffMobile", "value": "9876543210" },
     { "key": "staffTemporaryPassword", "value": "" },
-    { "key": "userId", "value": "" },
-    { "key": "teacherId", "value": "" },
-    { "key": "studentId", "value": "" },
+    { "key": "enrollmentId", "value": "" },
     { "key": "parentId", "value": "" },
+    { "key": "teacherId", "value": "" },
+    { "key": "teacherAssignmentId", "value": "" },
+    { "key": "periodId", "value": "" },
+    { "key": "timetableEntryId", "value": "" },
+    { "key": "examId", "value": "" },
+    { "key": "examSubjectId", "value": "" },
+    { "key": "eventId", "value": "" },
+    { "key": "notificationId", "value": "" },
+    { "key": "userId", "value": "" },
+    { "key": "studentId", "value": "" },
     { "key": "profileOptionId", "value": "" },
     { "key": "schoolAdminEmail", "value": "schooladmin@example.test" },
     { "key": "schoolAdminPassword", "value": "" }
@@ -113,6 +121,59 @@
       { "name": "Get Staff", "request": { "method": "GET", "url": "{{baseUrl}}/schools/{{schoolId}}/staff/{{staffId}}" } },
       { "name": "Update Staff", "request": { "method": "PATCH", "header": [{ "key": "Content-Type", "value": "application/json" }], "body": { "mode": "raw", "raw": "{ \"lastName\": \"Kumar Updated\" }" }, "url": "{{baseUrl}}/schools/{{schoolId}}/staff/{{staffId}}" } },
       { "name": "Deactivate Staff", "request": { "method": "DELETE", "url": "{{baseUrl}}/schools/{{schoolId}}/staff/{{staffId}}" } }
+    ] },
+    { "name": "Student Enrollment", "item": [
+      { "name": "Enroll Student", "request": { "method": "POST", "header": [{ "key": "Content-Type", "value": "application/json" }], "body": { "mode": "raw", "raw": "{\n  \"academicYearId\": \"{{academicYearId}}\",\n  \"classId\": \"{{classId}}\",\n  \"sectionId\": \"{{sectionId}}\",\n  \"rollNumber\": \"1\"\n}" }, "url": "{{baseUrl}}/students/{{studentId}}/enrollments" }, "event": [{ "listen": "test", "script": { "exec": ["pm.collectionVariables.set('enrollmentId', pm.response.json().id);"] } }] },
+      { "name": "Student Enrollment History", "request": { "method": "GET", "url": "{{baseUrl}}/students/{{studentId}}/enrollments" } },
+      { "name": "Transfer Section", "request": { "method": "PATCH", "header": [{ "key": "Content-Type", "value": "application/json" }], "body": { "mode": "raw", "raw": "{ \"sectionId\": \"{{sectionId}}\", \"status\": \"ACTIVE\" }" }, "url": "{{baseUrl}}/students/{{studentId}}/enrollments/{{enrollmentId}}" } }
+    ] },
+    { "name": "Parent Onboarding", "item": [
+      { "name": "Create Parent Login", "request": { "method": "POST", "header": [{ "key": "Content-Type", "value": "application/json" }], "body": { "mode": "raw", "raw": "{\n  \"firstName\": \"Parent\",\n  \"lastName\": \"One\",\n  \"mobile\": \"9876543211\",\n  \"email\": \"parent1@example.com\",\n  \"parentCode\": \"P001\"\n}" }, "url": "{{baseUrl}}/parents/onboard" }, "event": [{ "listen": "test", "script": { "exec": ["pm.collectionVariables.set('parentId', pm.response.json().parent.id);"] } }] },
+      { "name": "Link Parent to Student", "request": { "method": "POST", "header": [{ "key": "Content-Type", "value": "application/json" }], "body": { "mode": "raw", "raw": "{ \"studentId\": \"{{studentId}}\", \"relationshipType\": \"father\", \"isPrimary\": true }" }, "url": "{{baseUrl}}/parents/{{parentId}}/students" } },
+      { "name": "Unlink Parent from Student", "request": { "method": "DELETE", "url": "{{baseUrl}}/parents/{{parentId}}/students/{{studentId}}" } }
+    ] },
+    { "name": "Teacher Academic Assignments", "item": [
+      { "name": "Assign Teacher Academics", "request": { "method": "POST", "header": [{ "key": "Content-Type", "value": "application/json" }], "body": { "mode": "raw", "raw": "{\n  \"academicYearId\": \"{{academicYearId}}\",\n  \"classId\": \"{{classId}}\",\n  \"sectionId\": \"{{sectionId}}\",\n  \"subjectId\": \"{{subjectId}}\",\n  \"isClassTeacher\": false\n}" }, "url": "{{baseUrl}}/teachers/{{teacherId}}/assignments" }, "event": [{ "listen": "test", "script": { "exec": ["pm.collectionVariables.set('teacherAssignmentId', pm.response.json().id);"] } }] },
+      { "name": "List Teacher Assignments", "request": { "method": "GET", "url": "{{baseUrl}}/teachers/{{teacherId}}/assignments" } },
+      { "name": "Remove Teacher Assignment", "request": { "method": "DELETE", "url": "{{baseUrl}}/teachers/{{teacherId}}/assignments/{{teacherAssignmentId}}" } }
+    ] },
+    { "name": "Attendance", "item": [
+      { "name": "Mark Student Attendance", "request": { "method": "POST", "header": [{ "key": "Content-Type", "value": "application/json" }], "body": { "mode": "raw", "raw": "{ \"date\": \"2026-08-18\", \"records\": [{ \"enrollmentId\": \"{{enrollmentId}}\", \"status\": \"PRESENT\" }] }" }, "url": "{{baseUrl}}/attendance/students" } },
+      { "name": "List Student Attendance", "request": { "method": "GET", "url": "{{baseUrl}}/attendance/students?date=2026-08-18&classId={{classId}}&sectionId={{sectionId}}" } },
+      { "name": "Mark Staff Attendance", "request": { "method": "POST", "header": [{ "key": "Content-Type", "value": "application/json" }], "body": { "mode": "raw", "raw": "{ \"staffId\": \"{{staffId}}\", \"date\": \"2026-08-18\", \"status\": \"PRESENT\" }" }, "url": "{{baseUrl}}/attendance/staff" } },
+      { "name": "List Staff Attendance", "request": { "method": "GET", "url": "{{baseUrl}}/attendance/staff?date=2026-08-18" } }
+    ] },
+    { "name": "Timetable", "item": [
+      { "name": "Create Time Period", "request": { "method": "POST", "header": [{ "key": "Content-Type", "value": "application/json" }], "body": { "mode": "raw", "raw": "{ \"name\": \"Period 1\", \"startTime\": \"09:00\", \"endTime\": \"09:45\", \"sortOrder\": 1 }" }, "url": "{{baseUrl}}/timetable/periods" }, "event": [{ "listen": "test", "script": { "exec": ["pm.collectionVariables.set('periodId', pm.response.json().id);"] } }] },
+      { "name": "List Time Periods", "request": { "method": "GET", "url": "{{baseUrl}}/timetable/periods" } },
+      { "name": "Create Timetable Entry", "request": { "method": "POST", "header": [{ "key": "Content-Type", "value": "application/json" }], "body": { "mode": "raw", "raw": "{ \"academicYearId\": \"{{academicYearId}}\", \"classId\": \"{{classId}}\", \"sectionId\": \"{{sectionId}}\", \"subjectId\": \"{{subjectId}}\", \"teacherId\": \"{{teacherId}}\", \"periodId\": \"{{periodId}}\", \"weekday\": 1 }" }, "url": "{{baseUrl}}/timetable/entries" }, "event": [{ "listen": "test", "script": { "exec": ["pm.collectionVariables.set('timetableEntryId', pm.response.json().id);"] } }] },
+      { "name": "List Timetable", "request": { "method": "GET", "url": "{{baseUrl}}/timetable/entries?academicYearId={{academicYearId}}&sectionId={{sectionId}}" } },
+      { "name": "Delete Timetable Entry", "request": { "method": "DELETE", "url": "{{baseUrl}}/timetable/entries/{{timetableEntryId}}" } }
+    ] },
+    { "name": "Exams and Marks", "item": [
+      { "name": "Create Exam", "request": { "method": "POST", "header": [{ "key": "Content-Type", "value": "application/json" }], "body": { "mode": "raw", "raw": "{ \"academicYearId\": \"{{academicYearId}}\", \"name\": \"Term 1\", \"type\": \"TERM\" }" }, "url": "{{baseUrl}}/exams" }, "event": [{ "listen": "test", "script": { "exec": ["pm.collectionVariables.set('examId', pm.response.json().id);"] } }] },
+      { "name": "List Exams", "request": { "method": "GET", "url": "{{baseUrl}}/exams?academicYearId={{academicYearId}}" } },
+      { "name": "Add Exam Subject", "request": { "method": "POST", "header": [{ "key": "Content-Type", "value": "application/json" }], "body": { "mode": "raw", "raw": "{ \"classId\": \"{{classId}}\", \"subjectId\": \"{{subjectId}}\", \"maximumMarks\": 100, \"passingMarks\": 35 }" }, "url": "{{baseUrl}}/exams/{{examId}}/subjects" }, "event": [{ "listen": "test", "script": { "exec": ["pm.collectionVariables.set('examSubjectId', pm.response.json().id);"] } }] },
+      { "name": "Enter Marks", "request": { "method": "POST", "header": [{ "key": "Content-Type", "value": "application/json" }], "body": { "mode": "raw", "raw": "{ \"records\": [{ \"enrollmentId\": \"{{enrollmentId}}\", \"marksObtained\": 80 }] }" }, "url": "{{baseUrl}}/exams/subjects/{{examSubjectId}}/marks" } },
+      { "name": "Get Exam Results", "request": { "method": "GET", "url": "{{baseUrl}}/exams/{{examId}}/results?classId={{classId}}" } }
+    ] },
+    { "name": "Dashboard and Reports", "item": [
+      { "name": "Dashboard Summary", "request": { "method": "GET", "url": "{{baseUrl}}/dashboard/summary" } },
+      { "name": "Student Report", "request": { "method": "GET", "url": "{{baseUrl}}/reports/students?academicYearId={{academicYearId}}&classId={{classId}}" } },
+      { "name": "Attendance Report", "request": { "method": "GET", "url": "{{baseUrl}}/reports/attendance?from=2026-08-01&to=2026-08-31" } },
+      { "name": "Staff Report", "request": { "method": "GET", "url": "{{baseUrl}}/reports/staff" } }
+    ] },
+    { "name": "Events", "item": [
+      { "name": "Create Event", "request": { "method": "POST", "header": [{ "key": "Content-Type", "value": "application/json" }], "body": { "mode": "raw", "raw": "{ \"title\": \"Sports Day\", \"eventType\": \"SCHOOL\", \"startsAt\": \"2026-09-01T09:00:00.000Z\", \"audience\": \"ALL\" }" }, "url": "{{baseUrl}}/events" }, "event": [{ "listen": "test", "script": { "exec": ["pm.collectionVariables.set('eventId', pm.response.json().id);"] } }] },
+      { "name": "List Events", "request": { "method": "GET", "url": "{{baseUrl}}/events" } },
+      { "name": "Update Event", "request": { "method": "PATCH", "header": [{ "key": "Content-Type", "value": "application/json" }], "body": { "mode": "raw", "raw": "{ \"location\": \"Main Ground\" }" }, "url": "{{baseUrl}}/events/{{eventId}}" } },
+      { "name": "Delete Event", "request": { "method": "DELETE", "url": "{{baseUrl}}/events/{{eventId}}" } }
+    ] },
+    { "name": "Notifications and Audit", "item": [
+      { "name": "Create Notification", "request": { "method": "POST", "header": [{ "key": "Content-Type", "value": "application/json" }], "body": { "mode": "raw", "raw": "{ \"channel\": \"IN_APP\", \"title\": \"Welcome\", \"message\": \"Welcome to DAVI\" }" }, "url": "{{baseUrl}}/notifications" }, "event": [{ "listen": "test", "script": { "exec": ["pm.collectionVariables.set('notificationId', pm.response.json().id);"] } }] },
+      { "name": "List Notifications", "request": { "method": "GET", "url": "{{baseUrl}}/notifications" } },
+      { "name": "Mark Notification Read", "request": { "method": "PATCH", "url": "{{baseUrl}}/notifications/{{notificationId}}/read" } },
+      { "name": "List Audit Logs", "request": { "method": "GET", "url": "{{baseUrl}}/audit-logs?take=100" } }
     ] },
     { "name": "Users", "item": [
       { "name": "Create (passwordHash is required)", "request": { "method": "POST", "header": [{ "key": "Content-Type", "value": "application/json" }], "body": { "mode": "raw", "raw": "{ \"schoolId\": \"{{schoolId}}\", \"email\": \"manual-user@example.test\", \"passwordHash\": \"pre-hashed-password\", \"firstName\": \"Manual\", \"lastName\": \"User\" }" }, "url": "{{baseUrl}}/users" } }, { "name": "List", "request": { "method": "GET", "url": "{{baseUrl}}/users" } }, { "name": "Get", "request": { "method": "GET", "url": "{{baseUrl}}/users/{{userId}}" } }, { "name": "Update", "request": { "method": "PATCH", "header": [{ "key": "Content-Type", "value": "application/json" }], "body": { "mode": "raw", "raw": "{ \"phone\": \"+254700000999\" }" }, "url": "{{baseUrl}}/users/{{userId}}" } }, { "name": "Delete", "request": { "method": "DELETE", "url": "{{baseUrl}}/users/{{userId}}" } }, { "name": "List user roles", "request": { "method": "GET", "url": "{{baseUrl}}/users/{{userId}}/roles" } }, { "name": "Assign role", "request": { "method": "POST", "header": [{ "key": "Content-Type", "value": "application/json" }], "body": { "mode": "raw", "raw": "{ \"roleName\": \"teacher\" }" }, "url": "{{baseUrl}}/users/{{userId}}/roles" } }, { "name": "Remove role", "request": { "method": "DELETE", "url": "{{baseUrl}}/users/{{userId}}/roles/{{roleId}}" } }

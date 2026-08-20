@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateUserDto, UpdateUserDto, AssignRoleDto } from './users.dto';
@@ -7,8 +7,10 @@ import { CreateUserDto, UpdateUserDto, AssignRoleDto } from './users.dto';
 export class UsersService {
   constructor(private readonly prisma: PrismaService) {}
 
-  findAll() {
-    return this.prisma.user.findMany({
+  async findAll(schoolId: string | null) {
+    this.requireSchool(schoolId);
+    const users = await this.prisma.user.findMany({
+      where: { schoolId },
       include: {
         school: true,
         roles: { include: { role: true } },
@@ -17,9 +19,11 @@ export class UsersService {
         parent: true,
       },
     });
+    return users.map((user) => this.safe(user));
   }
 
-  async findOne(id: string) {
+  async findOne(id: string, schoolId: string | null) {
+    this.requireSchool(schoolId);
     const user = await this.prisma.user.findUnique({
       where: { id },
       include: {
@@ -34,11 +38,14 @@ export class UsersService {
     if (!user) {
       throw new NotFoundException(`User with id ${id} not found`);
     }
+    if (user.schoolId !== schoolId) throw new ForbiddenException('You can only access users from your own school.');
 
-    return user;
+    return this.safe(user);
   }
 
-  create(data: CreateUserDto) {
+  async create(schoolId: string | null, data: CreateUserDto) {
+    this.requireSchool(schoolId);
+    if (data.schoolId !== schoolId) throw new ForbiddenException('You can only create users for your own school.');
     const baseUserData = {
       email: data.email,
       firstName: data.firstName,
@@ -49,38 +56,42 @@ export class UsersService {
       status: data.status ?? 'ACTIVE',
     };
 
-    return data.schoolId
-      ? this.prisma.user.create({
+    const user = data.schoolId
+      ? await this.prisma.user.create({
           data: {
             ...baseUserData,
             schoolId: data.schoolId,
           },
         })
-      : this.prisma.user.create({
+      : await this.prisma.user.create({
           data: baseUserData,
         });
+    return this.safe(user);
   }
 
-  async update(id: string, data: UpdateUserDto) {
-    await this.findOne(id);
+  async update(id: string, schoolId: string | null, data: UpdateUserDto) {
+    await this.findOne(id, schoolId);
+    if (data.schoolId !== undefined && data.schoolId !== schoolId) throw new ForbiddenException('A user cannot be moved to another school.');
 
-    return this.prisma.user.update({
+    const user = await this.prisma.user.update({
       where: { id },
       data: {
         ...data,
         ...(data.status ? { status: data.status } : {}),
       },
     });
+    return this.safe(user);
   }
 
-  async remove(id: string) {
-    await this.findOne(id);
+  async remove(id: string, schoolId: string | null) {
+    await this.findOne(id, schoolId);
 
-    return this.prisma.user.delete({ where: { id } });
+    const user = await this.prisma.user.delete({ where: { id } });
+    return this.safe(user);
   }
 
-  async findRoles(userId: string) {
-    await this.findOne(userId);
+  async findRoles(userId: string, schoolId: string | null) {
+    await this.findOne(userId, schoolId);
 
     return this.prisma.userRole.findMany({
       where: { userId },
@@ -89,17 +100,16 @@ export class UsersService {
     });
   }
 
-  async assignRole(userId: string, data: AssignRoleDto) {
-    await this.findOne(userId);
+  async assignRole(userId: string, schoolId: string | null, data: AssignRoleDto) {
+    await this.findOne(userId, schoolId);
 
     let role = null;
 
     if (data.roleId) {
-      role = await this.prisma.role.findUnique({ where: { id: data.roleId } });
+      role = await this.prisma.role.findFirst({ where: { id: data.roleId, schoolId: schoolId! } });
     } else if (data.roleName) {
-      const user = await this.prisma.user.findUnique({ where: { id: userId } });
       const code = data.roleName.toUpperCase().replace(/[^A-Z0-9]+/g, '_');
-      role = await this.prisma.role.findFirst({ where: { schoolId: user?.schoolId ?? null, code } });
+      role = await this.prisma.role.findFirst({ where: { schoolId: schoolId!, code } });
     }
 
     if (!role) {
@@ -123,8 +133,8 @@ export class UsersService {
     });
   }
 
-  async removeRole(userId: string, roleId: string) {
-    await this.findOne(userId);
+  async removeRole(userId: string, roleId: string, schoolId: string | null) {
+    await this.findOne(userId, schoolId);
 
     const assignment = await this.prisma.userRole.findUnique({
       where: { userId_roleId: { userId, roleId } },
@@ -138,4 +148,7 @@ export class UsersService {
       where: { userId_roleId: { userId, roleId } },
     });
   }
+
+  private requireSchool(schoolId: string | null): asserts schoolId is string { if (!schoolId) throw new ForbiddenException('A school account is required.'); }
+  private safe(user: any) { user.passwordHash = undefined; return user; }
 }

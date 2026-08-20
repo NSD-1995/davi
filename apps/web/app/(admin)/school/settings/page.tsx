@@ -1,0 +1,2 @@
+import { PageHeader } from '../../../../components/ui';
+export default function SettingsPage() { return <><PageHeader title="School settings" description="Additional school preferences." /><section className="card empty"><div className="empty-icon">⚙</div><h3>Settings are managed from the backend</h3><p>This foundation does not introduce settings without a defined product contract.</p></section></>; }

@@ -19,7 +19,10 @@ export class StaffService {
       const user = await tx.user.create({ data: { schoolId, username: mobile, email, passwordHash, firstName, lastName: data.lastName?.trim() || '', phone: mobile, mustChangePassword: true } });
       const created = await tx.staff.create({ data: { schoolId, userId: user.id, employeeId, joiningDate: data.joiningDate ? new Date(data.joiningDate) : null } });
       await tx.userRole.create({ data: { userId: user.id, roleId: role.id, schoolId } });
-      return tx.staff.findUniqueOrThrow({ where: { id: created.id }, include: { user: { include: { roles: { include: { role: true } } } } } });
+      if (role.code.includes('TEACHER')) {
+        await tx.teacher.create({ data: { userId: user.id, schoolId, teacherCode: employeeId, hireDate: data.joiningDate ? new Date(data.joiningDate) : null } });
+      }
+      return tx.staff.findUniqueOrThrow({ where: { id: created.id }, include: { user: { include: { teacher: true, roles: { include: { role: true } } } } } });
     });
     return { message: 'Staff created successfully', staff: this.safe(staff), credentials: { username: mobile, temporaryPassword, mustChangePassword: true } };
   }

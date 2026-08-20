@@ -54,3 +54,23 @@ Subject and academic-year subject endpoints require a school-admin JWT and are r
 7. Test permitted and non-permitted endpoints. Missing permissions return `403 Forbidden`, and School A users cannot manage School B paths.
 
 Staff academic-year, class, section, and subject responsibilities are intentionally separate from access roles and are not part of this workflow.
+
+## Complete school operations workflow
+
+After school setup, run the extended folders in this order:
+
+1. **Student Enrollment** — place each Student into one Academic Year, Class, and Section. A Student may have one enrollment per Academic Year.
+2. **Parent Onboarding** — generate a Parent mobile login, link one or more Students, and select the primary guardian. Parents can use `GET /parents/me/students` after their first-time password change.
+3. **Teacher Academic Assignments** — assign Teacher profiles to Academic Year, Class, optional Section, Subject, or class-teacher responsibility. Staff created with a role code containing `TEACHER` automatically receives a Teacher profile.
+4. **Attendance** — bulk mark enrolled Student attendance or mark Staff attendance. Repeating the same date updates the existing daily record.
+5. **Timetable** — create ordered time periods, then create entries. The backend rejects Section and Teacher period conflicts and requires a matching Teacher academic assignment.
+6. **Exams and Marks** — create an Exam, configure Class Subjects and maximum/passing marks, enter marks in bulk, and retrieve calculated pass/fail results.
+7. **Events** — maintain the school calendar and audience information.
+8. **Dashboard and Reports** — retrieve school summary counts, current-day attendance, upcoming events, and export-ready Student, Staff, and attendance datasets.
+9. **Notifications and Audit** — create in-app/external-channel notification queue records, mark them read/sent, and inspect automatically recorded mutation audit logs.
+
+External Email, SMS, and WhatsApp delivery requires a provider adapter and credentials. DAVI currently persists a reliable notification outbox and delivery state; `IN_APP` notifications work without an external provider.
+
+## New permission codes
+
+Run `npx prisma db seed` after migrations so custom roles can receive `EVENT_VIEW`, `EVENT_MANAGE`, `NOTIFICATION_VIEW`, `NOTIFICATION_MANAGE`, and `AUDIT_VIEW`, in addition to the existing Attendance, Timetable, Exam, Marks, Dashboard, and Report permissions.
