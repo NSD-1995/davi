@@ -3,8 +3,9 @@ import Link from 'next/link'; import { usePathname } from 'next/navigation'; imp
 const groups = [
   { label: '', links: [{ href: '/dashboard', label: 'Dashboard', icon: '⌂', permission: 'DASHBOARD_VIEW' }] },
   { label: 'School', links: [{ href: '/school/profile', label: 'School Profile', icon: '▣', permission: 'SCHOOL_PROFILE_VIEW' }, { href: '/school/settings', label: 'Settings', icon: '⚙', permission: 'SCHOOL_PROFILE_VIEW' }] },
-  { label: 'Academics', links: [{ href: '/academics/academic-years', label: 'Academic Years', icon: '◫', permission: 'ACADEMIC_YEAR_VIEW' }, { href: '/academics/classes', label: 'Classes & Sections', icon: '▤', permission: 'CLASS_VIEW' }, { href: '/academics/subjects', label: 'Subjects', icon: '◇', permission: 'SUBJECT_VIEW' }] },
-  { label: 'Access Management', links: [{ href: '/access/roles', label: 'Roles & Permissions', icon: '◉', permission: 'ROLE_VIEW' }, { href: '/people/staff', label: 'Staff', icon: '♙', permission: 'STAFF_VIEW' }] },
+  { label: 'Academics', links: [{ href: '/academics/academic-years', label: 'Academic Years', icon: '◫', permission: 'ACADEMIC_YEAR_VIEW' }, { href: '/academics/classes', label: 'Classes & Sections', icon: '▤', permission: 'CLASS_VIEW' }, { href: '/academics/workspace', label: 'Class Workspace', icon: '◉', permission: 'CLASS_VIEW' }, { href: '/academics/subjects', label: 'Subjects', icon: '◇', permission: 'SUBJECT_VIEW' }] },
+  { label: 'Access Management', links: [{ href: '/access/roles', label: 'Roles & Permissions', icon: '◉', permission: 'ROLE_VIEW' }, { href: '/people/staff', label: 'Staff', icon: '♙', permission: 'STAFF_VIEW' }, { href: '/people/teachers', label: 'Teachers', icon: '♞', permission: 'STAFF_VIEW' }] },
+  { label: 'People', links: [{ href: '/people/students', label: 'Students', icon: '◉', permission: 'STUDENT_VIEW' }, { href: '/people/parents', label: 'Parents', icon: '♥', permission: 'PARENT_VIEW' }] },
 ];
 export function AppShell({ children }: { children: ReactNode }) { const path = usePathname(); const { session, logout, can } = useAuth(); const [open, setOpen] = useState(false); const school = session?.user.school; const name = `${session?.user.firstName || ''} ${session?.user.lastName || ''}`.trim(); return <div className="app-shell">
   {open && <button className="scrim" onClick={() => setOpen(false)} aria-label="Close navigation" />}

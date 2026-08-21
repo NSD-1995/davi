@@ -25,3 +25,7 @@ export class CreateTeacherAssignmentDto {
   subjectId?: string;
   isClassTeacher?: boolean;
 }
+
+export class ReplaceClassTeacherDto {
+  teacherId!: string;
+}

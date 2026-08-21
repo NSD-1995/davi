@@ -25,6 +25,8 @@ import { NotificationsModule } from './notifications/notifications.module';
 import { DashboardModule } from './dashboard/dashboard.module';
 import { ReportsModule } from './reports/reports.module';
 import { AuditModule } from './audit/audit.module';
+import { ClassWorkspaceModule } from './class-workspace/class-workspace.module';
+import { StudentAdmissionsModule } from './student-admissions/student-admissions.module';
 import { AuditInterceptor } from './audit/audit.interceptor';
 
 @Module({
@@ -52,6 +54,8 @@ import { AuditInterceptor } from './audit/audit.interceptor';
     DashboardModule,
     ReportsModule,
     AuditModule,
+    ClassWorkspaceModule,
+    StudentAdmissionsModule,
   ],
   controllers: [AppController],
   providers: [AppService, { provide: APP_INTERCEPTOR, useClass: AuditInterceptor }],

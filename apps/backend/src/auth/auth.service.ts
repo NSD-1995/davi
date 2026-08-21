@@ -165,12 +165,12 @@ export class AuthService {
   }
 
   async me(userId: string) {
-    const user = await this.prisma.user.findUnique({ where: { id: userId }, include: { roles: { include: { role: { include: { rolePermissions: { include: { permission: true } } } } } } } });
+    const user = await this.prisma.user.findUnique({ where: { id: userId }, include: { school: true, roles: { include: { role: { include: { rolePermissions: { include: { permission: true } } } } } } } });
     if (!user) throw new UnauthorizedException('User not found');
     const roleCodes = user.roles.map((item) => item.role.code);
     const permissions = roleCodes.some((code) => code === 'SUPER_ADMIN' || code === 'SCHOOL_ADMIN')
       ? (await this.prisma.permission.findMany({ select: { code: true } })).map((item) => item.code)
       : [...new Set(user.roles.flatMap((item) => item.role.rolePermissions.map((mapping) => mapping.permission.code)))];
-    return { user: { id: user.id, firstName: user.firstName, lastName: user.lastName, schoolId: user.schoolId, username: user.username, mustChangePassword: user.mustChangePassword }, roles: user.roles.map((item) => ({ id: item.role.id, name: item.role.name, code: item.role.code })), permissions };
+    return { user: { id: user.id, firstName: user.firstName, lastName: user.lastName, schoolId: user.schoolId, username: user.username, mustChangePassword: user.mustChangePassword, school: user.school }, roles: user.roles.map((item) => ({ id: item.role.id, name: item.role.name, code: item.role.code })), permissions };
   }
 }

@@ -45,8 +45,13 @@ export class SchoolsService {
       throw new BadRequestException('Admin email is required when creating a school');
     }
 
+    if (!data.shortName?.trim()) {
+      throw new BadRequestException('School short name is required for the school URL');
+    }
+
+    const adminEmail = data.adminEmail.trim().toLowerCase();
     const existingAdmin = await this.prisma.user.findUnique({
-      where: { email: data.adminEmail },
+      where: { email: adminEmail },
     });
 
     if (existingAdmin) {
@@ -64,10 +69,12 @@ export class SchoolsService {
       throw new BadRequestException(`School with name "${normalizedName}" already exists`);
     }
 
+    const slug = await this.createSchoolSlug(data.shortName);
     const school = await this.prisma.school.create({
       data: {
-        name: data.name,
+        name: normalizedName,
         shortName: data.shortName,
+        slug,
         address: data.address,
         city: data.city,
         country: data.country,
@@ -83,7 +90,8 @@ export class SchoolsService {
     const adminUser = await this.prisma.user.create({
       data: {
         schoolId: school.id,
-        email: data.adminEmail,
+        email: adminEmail,
+        username: adminEmail,
         passwordHash,
         firstName: data.adminFirstName ?? 'School',
         lastName: data.adminLastName ?? 'Admin',
@@ -119,17 +127,38 @@ export class SchoolsService {
       },
     });
 
+    const loginPath = `/school/${school.slug}/login`;
+    const frontendUrl = (process.env.FRONTEND_URL ?? 'http://localhost:3000').replace(/\/$/, '');
+
     return {
       message: 'School and school admin created successfully',
       school,
       admin: {
         id: adminUser.id,
         email: adminUser.email,
+        username: adminUser.username,
         schoolId: adminUser.schoolId,
         mustChangePassword: adminUser.mustChangePassword,
       },
       temporaryPassword: tempPassword,
+      credentials: { username: adminUser.username, temporaryPassword: tempPassword },
+      loginPath,
+      loginUrl: `${frontendUrl}${loginPath}`,
     };
+  }
+
+  private async createSchoolSlug(shortName: string) {
+    const slug = this.slugify(shortName);
+    if (!slug) throw new BadRequestException('School short name must contain letters or numbers');
+
+    const existingSchool = await this.prisma.school.findUnique({ where: { slug } });
+    if (existingSchool) throw new BadRequestException(`School short name "${shortName}" is already in use`);
+
+    return slug;
+  }
+
+  private slugify(value: string) {
+    return value.toLowerCase().trim().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '');
   }
 
   private generateTemporaryPassword() {

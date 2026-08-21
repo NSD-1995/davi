@@ -23,13 +23,13 @@ export class UpdateStudentDto {
 export class EnrollStudentDto {
   academicYearId!: string;
   classId!: string;
-  sectionId!: string;
+  sectionId?: string;
   rollNumber?: string;
 }
 
 export class UpdateStudentEnrollmentDto {
   classId?: string;
-  sectionId?: string;
+  sectionId?: string | null;
   rollNumber?: string;
   status?: 'ACTIVE' | 'TRANSFERRED' | 'PROMOTED' | 'WITHDRAWN';
 }

@@ -1,6 +1,6 @@
 export class CreateSchoolDto {
   name!: string;
-  shortName?: string;
+  shortName!: string;
   address?: string;
   city?: string;
   country?: string;

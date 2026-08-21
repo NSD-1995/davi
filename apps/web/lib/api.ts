@@ -1,4 +1,4 @@
-import type { AcademicYear, DashboardSummary, Permission, Role, School, SchoolClass, Section, Staff, Subject, User } from './types';
+import type { AcademicYear, ClassWorkspace, DashboardSummary, Permission, Role, School, SchoolClass, Section, SectionDashboard, Staff, Student, Subject, User } from './types';
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001/api/v1';
 export class ApiError extends Error { constructor(message: string, public status: number, public details?: unknown) { super(message); } }
@@ -18,6 +18,15 @@ export const authApi = {
   changePassword: (token: string, currentPassword: string, newPassword: string) => request<{ message: string; user: User }>('/auth/change-password', { method: 'POST', body: json({ currentPassword, newPassword }) }, token),
 };
 export const dashboardApi = { summary: (t: string) => request<DashboardSummary>('/dashboard/summary', {}, t) };
+export const schoolSettingsApi = {
+  get: (t: string, schoolId: string) => request<Record<string, unknown>>(`/school-settings/schools/${schoolId}`, {}, t),
+  save: (t: string, schoolId: string, data: Record<string, unknown>) => request<Record<string, unknown>>('/school-settings', { method: 'POST', body: json({ schoolId, ...data }) }, t),
+  update: (t: string, id: string, data: Record<string, unknown>) => request<Record<string, unknown>>(`/school-settings/${id}`, { method: 'PATCH', body: json(data) }, t),
+};
+export const timetableApi = { list: (t: string, yearId: string, classId: string, sectionId: string) => request<Record<string, unknown>[]>(`/timetable/entries?academicYearId=${yearId}&classId=${classId}&sectionId=${sectionId}`, {}, t) };
+export const examApi = { list: (t: string, yearId: string) => request<Record<string, unknown>[]>(`/exams?academicYearId=${yearId}`, {}, t), results: (t: string, examId: string, classId: string) => request<Record<string, unknown>[]>(`/exams/${examId}/results?classId=${classId}`, {}, t) };
+export const eventApi = { list: (t: string) => request<Record<string, unknown>[]>('/events', {}, t) };
+export const reportApi = { students: (t: string, yearId: string, classId: string) => request<Record<string, unknown>[]>(`/reports/students?academicYearId=${yearId}&classId=${classId}`, {}, t) };
 export const schoolApi = {
   // Login is currently the only School Admin-readable source for the school record.
   update: (t: string, id: string, data: Partial<School>) => request<School>(`/schools/${id}`, { method: 'PATCH', body: json(data) }, t),
@@ -35,6 +44,13 @@ export const classApi = {
   create: (t: string, data: Record<string, unknown>) => request<SchoolClass>('/classes', { method: 'POST', body: json(data) }, t),
   update: (t: string, id: string, data: Record<string, unknown>) => request<SchoolClass>(`/classes/${id}`, { method: 'PATCH', body: json(data) }, t),
   bulk: (t: string, data: Record<string, unknown>) => request('/classes/bulk', { method: 'POST', body: json(data) }, t),
+};
+export const classWorkspaceApi = {
+  list: (t: string, yearId: string) => request<ClassWorkspace[]>(`/academic-years/${yearId}/class-workspaces`, {}, t),
+  dashboard: (t: string, yearId: string, classId: string, sectionId: string) => request<SectionDashboard>(`/academic-years/${yearId}/classes/${classId}/sections/${sectionId}/dashboard`, {}, t),
+  students: (t: string, yearId: string, classId: string, sectionId: string) => request<SectionDashboard['recentStudents']>(`/academic-years/${yearId}/classes/${classId}/sections/${sectionId}/students`, {}, t),
+  classTeacher: (t: string, yearId: string, classId: string, sectionId: string, teacherId: string) => request(`/academic-years/${yearId}/classes/${classId}/sections/${sectionId}/class-teacher`, { method: 'PUT', body: json({ teacherId }) }, t),
+  admit: (t: string, data: Record<string, unknown>) => request('/student-admissions', { method: 'POST', body: json(data) }, t),
 };
 export const sectionApi = {
   create: (t: string, data: Record<string, unknown>) => request<Section>('/sections', { method: 'POST', body: json(data) }, t),
@@ -60,4 +76,11 @@ export const staffApi = {
   create: (t: string, s: string, data: Record<string, unknown>) => request<{ message: string; staff: Staff; credentials: { username: string; temporaryPassword: string } }>(`/schools/${s}/staff`, { method: 'POST', body: json(data) }, t),
   update: (t: string, s: string, id: string, data: Record<string, unknown>) => request<Staff>(`/schools/${s}/staff/${id}`, { method: 'PATCH', body: json(data) }, t),
   deactivate: (t: string, s: string, id: string) => request(`/schools/${s}/staff/${id}`, { method: 'DELETE' }, t),
+};
+export const teacherApi = { list: (t: string) => request<Array<{ id: string; userId: string; teacherCode: string; specialization?: string | null; qualification?: string | null; status: string; user: { firstName: string; lastName: string } }>>('/teachers', {}, t), create: (t: string, data: Record<string, unknown>) => request('/teachers', { method: 'POST', body: json(data) }, t), update: (t: string, id: string, data: Record<string, unknown>) => request(`/teachers/${id}`, { method: 'PATCH', body: json(data) }, t), remove: (t: string, id: string) => request(`/teachers/${id}`, { method: 'DELETE' }, t) };
+export const parentApi = { list: (t: string) => request<Array<{ id: string; parentCode: string; occupation?: string | null; status: string; user: { firstName: string; lastName: string; phone?: string | null; email?: string | null } }>>('/parents', {}, t), onboard: (t: string, data: Record<string, unknown>) => request<{ parent: Record<string, unknown>; credentials: { username: string; temporaryPassword: string } }>('/parents/onboard', { method: 'POST', body: json(data) }, t), update: (t: string, id: string, data: Record<string, unknown>) => request(`/parents/${id}`, { method: 'PATCH', body: json(data) }, t), remove: (t: string, id: string) => request(`/parents/${id}`, { method: 'DELETE' }, t) };
+export const studentApi = {
+  list: (t: string) => request<Student[]>('/students', {}, t),
+  update: (t: string, id: string, data: Record<string, unknown>) => request<Student>(`/students/${id}`, { method: 'PATCH', body: json(data) }, t),
+  remove: (t: string, id: string) => request(`/students/${id}`, { method: 'DELETE' }, t),
 };

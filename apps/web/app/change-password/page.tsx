@@ -1,3 +1,28 @@
 'use client';
-import { useState, type FormEvent } from 'react'; import { useRouter } from 'next/navigation'; import { authApi, ApiError } from '../../lib/api'; import { useAuth } from '../../lib/auth-context';
-export default function ChangePasswordPage() { const { session, loading, refresh, logout } = useAuth(); const router = useRouter(); const [current, setCurrent] = useState(''); const [next, setNext] = useState(''); const [confirm, setConfirm] = useState(''); const [busy, setBusy] = useState(false); const [error, setError] = useState(''); const submit = async (e: FormEvent) => { e.preventDefault(); if (!session || busy) return; if (next.length < 8) return setError('New password must contain at least 8 characters.'); if (next !== confirm) return setError('New passwords do not match.'); setBusy(true); setError(''); try { await authApi.changePassword(session.token, current, next); await refresh(); router.replace('/dashboard'); } catch (err) { setError(err instanceof ApiError ? err.message : 'Password could not be changed.'); } finally { setBusy(false); } }; if (loading || !session) return <main className="screen-center">Loading…</main>; return <main className="auth-page simple"><section className="auth-panel"><form className="auth-card" onSubmit={submit}><div className="auth-brand dark"><span className="brand-mark">D</span><strong>DAVI</strong></div><span className="eyebrow">ACCOUNT SECURITY</span><h2>Create a new password</h2><p>Your temporary password must be changed before you continue.</p>{error && <div className="alert error">{error}</div>}<label className="field"><span>Current password</span><input type="password" autoComplete="current-password" value={current} onChange={e => setCurrent(e.target.value)} required /></label><label className="field"><span>New password</span><input type="password" autoComplete="new-password" value={next} onChange={e => setNext(e.target.value)} required /></label><label className="field"><span>Confirm new password</span><input type="password" autoComplete="new-password" value={confirm} onChange={e => setConfirm(e.target.value)} required /></label><button className="button full" disabled={busy}>{busy ? 'Updating password…' : 'Update password'}</button><button type="button" className="text-button" onClick={logout}>Sign out</button></form></section></main>; }
+
+import { useState, type FormEvent } from 'react';
+import { useRouter } from 'next/navigation';
+import { authApi, ApiError } from '../../lib/api';
+import { dashboardPathFor, useAuth } from '../../lib/auth-context';
+
+export default function ChangePasswordPage() {
+  const { session, loading, refresh, logout } = useAuth();
+  const router = useRouter();
+  const [current, setCurrent] = useState('');
+  const [next, setNext] = useState('');
+  const [confirm, setConfirm] = useState('');
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState('');
+  const submit = async (event: FormEvent) => {
+    event.preventDefault();
+    if (!session || busy) return;
+    if (next.length < 8) return setError('New password must contain at least 8 characters.');
+    if (next !== confirm) return setError('New passwords do not match.');
+    setBusy(true); setError('');
+    try { await authApi.changePassword(session.token, current, next); await refresh(); router.replace(dashboardPathFor(session)); }
+    catch (err) { setError(err instanceof ApiError ? err.message : 'Password could not be changed.'); }
+    finally { setBusy(false); }
+  };
+  if (loading || !session) return <main className="screen-center">Loading…</main>;
+  return <main className="auth-page simple"><section className="auth-panel"><form className="auth-card" onSubmit={submit}><div className="auth-brand dark"><span className="brand-mark">D</span><strong>DAVI</strong></div><span className="eyebrow">ACCOUNT SECURITY</span><h2>Create a new password</h2><p>Your temporary password must be changed before you continue.</p>{error && <div className="alert error">{error}</div>}<label className="field"><span>Current password</span><input type="password" autoComplete="current-password" value={current} onChange={e => setCurrent(e.target.value)} required /></label><label className="field"><span>New password</span><input type="password" autoComplete="new-password" value={next} onChange={e => setNext(e.target.value)} required /></label><label className="field"><span>Confirm new password</span><input type="password" autoComplete="new-password" value={confirm} onChange={e => setConfirm(e.target.value)} required /></label><button className="button full" disabled={busy}>{busy ? 'Updating password…' : 'Update password'}</button><button type="button" className="text-button" onClick={logout}>Sign out</button></form></section></main>;
+}
