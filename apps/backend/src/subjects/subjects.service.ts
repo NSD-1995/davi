@@ -73,7 +73,8 @@ export class SubjectsService {
   async remove(id: string, schoolId: string | null) {
     await this.findOne(id, schoolId);
     const assignments = await this.prisma.academicYearSubject.count({ where: { subjectId: id } });
-    if (assignments > 0) throw new ConflictException('Subject is assigned to one or more academic years. Remove those assignments or set the subject status to INACTIVE.');
+    const classAssignments = await this.prisma.classSubject.count({ where: { subjectId: id } });
+    if (assignments > 0 || classAssignments > 0) throw new ConflictException('Subject is assigned to one or more academic years or classes. Remove those assignments or set the subject status to INACTIVE.');
     return this.prisma.subject.delete({ where: { id } });
   }
 

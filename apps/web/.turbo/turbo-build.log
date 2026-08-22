@@ -5,34 +5,44 @@
   ▲ Next.js 14.2.15
 
    Creating an optimized production build ...
-Failed to compile.
+ ✓ Compiled successfully
+   Linting and checking validity of types ...
+   Collecting page data ...
+   Generating static pages (0/19) ...
+   Generating static pages (4/19) 
+   Generating static pages (9/19) 
+   Generating static pages (14/19) 
+ ✓ Generating static pages (19/19)
+   Finalizing page optimization ...
+   Collecting build traces ...
 
-./app/(admin)/academics/workspace/[classId]/sections/[sectionId]/page.tsx
-Module not found: Can't resolve '../../../../../../lib/api'
+Route (app)                                              Size     First Load JS
+┌ ○ /                                                    138 B          87.3 kB
+├ ○ /_not-found                                          873 B            88 kB
+├ ○ /academics/academic-years                            2.11 kB        93.1 kB
+├ ○ /academics/classes                                   3.43 kB        94.4 kB
+├ ○ /academics/subjects                                  2.5 kB         93.5 kB
+├ ○ /academics/workspace                                 1.63 kB        99.4 kB
+├ ƒ /academics/workspace/[classId]/sections/[sectionId]  2.84 kB         101 kB
+├ ○ /access/roles                                        2.34 kB        93.3 kB
+├ ○ /change-password                                     3.83 kB          91 kB
+├ ○ /dashboard                                           1.44 kB        99.2 kB
+├ ○ /forbidden                                           175 B          94.1 kB
+├ ○ /login                                               173 B          91.2 kB
+├ ○ /people/parents                                      1.39 kB        92.4 kB
+├ ○ /people/staff                                        2.42 kB        93.4 kB
+├ ○ /people/students                                     1.87 kB        99.6 kB
+├ ○ /people/teachers                                     1.44 kB        92.4 kB
+├ ƒ /school/[schoolSlug]/dashboard                       1.61 kB        99.4 kB
+├ ƒ /school/[schoolSlug]/login                           172 B          91.2 kB
+├ ○ /school/profile                                      1.5 kB         92.5 kB
+└ ○ /school/settings                                     1.28 kB        92.3 kB
++ First Load JS shared by all                            87.2 kB
+  ├ chunks/1dd3208c-33e07f47fbf0cd2b.js                  53.6 kB
+  ├ chunks/528-82014964c40bfd50.js                       31.6 kB
+  └ other shared chunks (total)                          1.95 kB
 
-https://nextjs.org/docs/messages/module-not-found
 
-./app/(admin)/academics/workspace/[classId]/sections/[sectionId]/page.tsx
-Module not found: Can't resolve '../../../../../../lib/auth-context'
+○  (Static)   prerendered as static content
+ƒ  (Dynamic)  server-rendered on demand
 
-https://nextjs.org/docs/messages/module-not-found
-
-./app/(admin)/academics/workspace/[classId]/sections/[sectionId]/page.tsx
-Module not found: Can't resolve '../../../../../../lib/toast-context'
-
-https://nextjs.org/docs/messages/module-not-found
-
-./app/(admin)/academics/workspace/[classId]/sections/[sectionId]/page.tsx
-Module not found: Can't resolve '../../../../../../components/ui'
-
-https://nextjs.org/docs/messages/module-not-found
-
-
-> Build failed because of webpack errors
-npm error Lifecycle script `build` failed with error:
-npm error code 1
-npm error path D:\Project-DAVI\apps\web
-npm error workspace @davi/web@0.1.0
-npm error location D:\Project-DAVI\apps\web
-npm error command failed
-npm error command C:\WINDOWS\system32\cmd.exe /d /s /c next build

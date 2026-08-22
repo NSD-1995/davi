@@ -1,9 +1,10 @@
 require('reflect-metadata');
 const test = require('node:test');
 const assert = require('node:assert/strict');
-const { ConflictException, ForbiddenException } = require('@nestjs/common');
+const { BadRequestException, ConflictException, ForbiddenException } = require('@nestjs/common');
 const { SubjectsService } = require('../dist/subjects/subjects.service');
 const { AcademicYearsService } = require('../dist/academic-years/academic-years.service');
+const { SchoolClassesService } = require('../dist/classes/classes.service');
 
 const school = { id: 'school-1' };
 const otherSchool = { id: 'school-2' };
@@ -19,6 +20,7 @@ function subjectPrisma(overrides = {}) {
       update: async ({ data }) => ({ ...subject, ...data }), delete: async () => subject,
     },
     academicYearSubject: { count: async () => 0 },
+    classSubject: { count: async () => 0 },
     ...overrides,
   };
 }
@@ -88,4 +90,42 @@ test('rejects duplicate assignment and cross-school subject/year access', async 
   const yearPrisma = academicPrisma();
   yearPrisma.academicYear.findUnique = async () => ({ ...year, schoolId: otherSchool.id });
   await assert.rejects(() => new AcademicYearsService(yearPrisma).assignSubjects(year.id, school.id, { schoolId: school.id, subjectIds: [subject.id] }), ForbiddenException);
+});
+
+const uuidSubject = '10000000-0000-4000-8000-000000000001';
+const uuidOtherSubject = '10000000-0000-4000-8000-000000000002';
+function classSubjectPrisma() {
+  let assigned = [uuidSubject];
+  const prisma = {
+    academicYear: { findFirst: async () => year },
+    schoolClass: { findFirst: async () => ({ id: 'class-1', schoolId: school.id, academicYearId: year.id }) },
+    subject: { findMany: async ({ where }) => (where.id?.in || [uuidSubject, uuidOtherSubject]).map(id => ({ ...subject, id, status: 'ACTIVE' })) },
+    classSubject: {
+      findMany: async (args) => args.select ? assigned.map(subjectId => ({ subjectId })) : assigned.map(subjectId => ({ subject: { ...subject, id: subjectId } })),
+      findFirst: async ({ where }) => assigned.includes(where.subjectId) ? { subjectId: where.subjectId } : null,
+    },
+    teacherAcademicAssignment: { count: async () => 0 }, timetableEntry: { count: async () => 0 }, examSubject: { count: async () => 0 },
+    $transaction: async callback => callback({
+      classSubject: {
+        deleteMany: async ({ where }) => { assigned = assigned.filter(id => !where.subjectId.in.includes(id)); },
+        createMany: async ({ data }) => { assigned.push(...data.map(item => item.subjectId)); },
+      },
+    }),
+  };
+  return prisma;
+}
+
+test('retrieves and replaces class subjects transactionally', async () => {
+  const service = new SchoolClassesService(classSubjectPrisma());
+  assert.deepEqual((await service.findSubjects(school.id, year.id, 'class-1')).subjects.map(item => item.id), [uuidSubject]);
+  const result = await service.replaceSubjects(school.id, year.id, 'class-1', { subjectIds: [uuidOtherSubject] });
+  assert.deepEqual(result.subjects.map(item => item.id), [uuidOtherSubject]);
+});
+
+test('rejects duplicate class subject IDs and blocks referenced removals', async () => {
+  const prisma = classSubjectPrisma();
+  const service = new SchoolClassesService(prisma);
+  await assert.rejects(() => service.replaceSubjects(school.id, year.id, 'class-1', { subjectIds: [uuidSubject, uuidSubject] }), BadRequestException);
+  prisma.teacherAcademicAssignment.count = async () => 1;
+  await assert.rejects(() => service.replaceSubjects(school.id, year.id, 'class-1', { subjectIds: [] }), ConflictException);
 });

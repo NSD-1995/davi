@@ -43,6 +43,10 @@ Other endpoints are currently public. The collection preserves that behavior; th
 
 Subject and academic-year subject endpoints require a school-admin JWT and are restricted to that admin's school. Run **Create Subject**, **Assign Subjects**, **Get Subjects By Academic Year**, and **Remove Subject From Academic Year** in that order. Removing an assignment leaves the master subject intact; a master subject cannot be deleted while any academic-year assignment remains. Valid subject statuses are `ACTIVE` and `INACTIVE`; valid types are `CORE`, `ELECTIVE`, and `OPTIONAL`.
 
+Class delivery is configured with **Get Class Subjects**, **Get Available Class Subjects**, and **Replace Class Subjects**. The mapping belongs to one academic year and class and is inherited by every section. Removing a subject is rejected with `409 Conflict` while teacher assignments, timetable entries, exams, or marks still reference it.
+
+Section staffing uses **Get/Replace Teaching Team** and **Get/Replace Subject Teachers**. Assignment replacement retains removed rows as inactive history. Lead and primary-teacher uniqueness is enforced per section, while assistants and support teachers remain unlimited by default.
+
 ## Roles, permissions, and staff sequence
 
 1. Apply the roles/permissions migration and run the Prisma seed before testing.
@@ -73,4 +77,4 @@ External Email, SMS, and WhatsApp delivery requires a provider adapter and crede
 
 ## New permission codes
 
-Run `npx prisma db seed` after migrations so custom roles can receive `EVENT_VIEW`, `EVENT_MANAGE`, `NOTIFICATION_VIEW`, `NOTIFICATION_MANAGE`, and `AUDIT_VIEW`, in addition to the existing Attendance, Timetable, Exam, Marks, Dashboard, and Report permissions.
+Run `npx prisma db seed` after migrations so custom roles can receive `CLASS_SUBJECT_VIEW`, `CLASS_SUBJECT_MANAGE`, `EVENT_VIEW`, `EVENT_MANAGE`, `NOTIFICATION_VIEW`, `NOTIFICATION_MANAGE`, and `AUDIT_VIEW`, in addition to the existing Attendance, Timetable, Exam, Marks, Dashboard, and Report permissions.

@@ -6,6 +6,7 @@ import {
   Param,
   Patch,
   Post,
+  Put,
   Query,
   Req,
   UseGuards,
@@ -14,7 +15,7 @@ import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { RequirePermissions } from '../auth/permissions.decorator';
 import { PermissionsGuard } from '../auth/permissions.guard';
 import { SchoolClassesService } from './classes.service';
-import { CreateClassesBulkDto, CreateSchoolClassDto, UpdateSchoolClassDto } from './classes.dto';
+import { CreateClassesBulkDto, CreateSchoolClassDto, ReplaceClassSubjectsDto, UpdateSchoolClassDto } from './classes.dto';
 
 @Controller('classes')
 @UseGuards(JwtAuthGuard, PermissionsGuard)
@@ -61,5 +62,29 @@ export class SchoolClassesController {
   @RequirePermissions('CLASS_DELETE')
   remove(@Req() req: any, @Param('id') id: string) {
     return this.schoolClassesService.remove(id, req.user.schoolId);
+  }
+}
+
+@Controller('academic-years/:academicYearId/classes/:classId')
+@UseGuards(JwtAuthGuard, PermissionsGuard)
+export class ClassSubjectsController {
+  constructor(private readonly schoolClassesService: SchoolClassesService) {}
+
+  @Get('subjects')
+  @RequirePermissions('CLASS_SUBJECT_VIEW')
+  findSubjects(@Req() req: any, @Param('academicYearId') academicYearId: string, @Param('classId') classId: string) {
+    return this.schoolClassesService.findSubjects(req.user.schoolId, academicYearId, classId);
+  }
+
+  @Get('available-subjects')
+  @RequirePermissions('CLASS_SUBJECT_VIEW')
+  availableSubjects(@Req() req: any, @Param('academicYearId') academicYearId: string, @Param('classId') classId: string) {
+    return this.schoolClassesService.availableSubjects(req.user.schoolId, academicYearId, classId);
+  }
+
+  @Put('subjects')
+  @RequirePermissions('CLASS_SUBJECT_MANAGE')
+  replaceSubjects(@Req() req: any, @Param('academicYearId') academicYearId: string, @Param('classId') classId: string, @Body() dto: ReplaceClassSubjectsDto) {
+    return this.schoolClassesService.replaceSubjects(req.user.schoolId, academicYearId, classId, dto);
   }
 }

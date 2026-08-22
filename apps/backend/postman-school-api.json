@@ -186,6 +186,13 @@
     ] },
     { "name": "Class Workspace", "item": [
       { "name": "Get Academic Class Workspaces", "request": { "method": "GET", "url": "{{baseUrl}}/academic-years/{{academicYearId}}/class-workspaces" } },
+      { "name": "Get Class Subjects", "request": { "method": "GET", "url": "{{baseUrl}}/academic-years/{{academicYearId}}/classes/{{classId}}/subjects" } },
+      { "name": "Get Available Class Subjects", "request": { "method": "GET", "url": "{{baseUrl}}/academic-years/{{academicYearId}}/classes/{{classId}}/available-subjects" } },
+      { "name": "Replace Class Subjects", "request": { "method": "PUT", "header": [{ "key": "Content-Type", "value": "application/json" }], "body": { "mode": "raw", "raw": "{ \"subjectIds\": [\"{{subjectId}}\"] }" }, "url": "{{baseUrl}}/academic-years/{{academicYearId}}/classes/{{classId}}/subjects" } },
+      { "name": "Get Teaching Team", "request": { "method": "GET", "url": "{{baseUrl}}/academic-years/{{academicYearId}}/classes/{{classId}}/sections/{{sectionId}}/teaching-team" } },
+      { "name": "Replace Teaching Team", "request": { "method": "PUT", "header": [{ "key": "Content-Type", "value": "application/json" }], "body": { "mode": "raw", "raw": "{ \"members\": [{ \"staffId\": \"{{staffId}}\", \"responsibilityType\": \"LEAD_TEACHER\" }] }" }, "url": "{{baseUrl}}/academic-years/{{academicYearId}}/classes/{{classId}}/sections/{{sectionId}}/teaching-team" } },
+      { "name": "Get Subject Teachers", "request": { "method": "GET", "url": "{{baseUrl}}/academic-years/{{academicYearId}}/classes/{{classId}}/sections/{{sectionId}}/subject-teachers" } },
+      { "name": "Replace Subject Teachers", "request": { "method": "PUT", "header": [{ "key": "Content-Type", "value": "application/json" }], "body": { "mode": "raw", "raw": "{ \"assignments\": [{ \"subjectId\": \"{{subjectId}}\", \"staffId\": \"{{staffId}}\", \"assignmentRole\": \"PRIMARY\" }] }" }, "url": "{{baseUrl}}/academic-years/{{academicYearId}}/classes/{{classId}}/sections/{{sectionId}}/subject-teachers" } },
       { "name": "Get Section Dashboard", "request": { "method": "GET", "url": "{{baseUrl}}/academic-years/{{academicYearId}}/classes/{{classId}}/sections/{{sectionId}}/dashboard" } },
       { "name": "Get Section Students", "request": { "method": "GET", "url": "{{baseUrl}}/academic-years/{{academicYearId}}/classes/{{classId}}/sections/{{sectionId}}/students" } },
       { "name": "Assign or Replace Class Teacher", "request": { "method": "PUT", "header": [{ "key": "Content-Type", "value": "application/json" }], "body": { "mode": "raw", "raw": "{ \"teacherId\": \"{{teacherId}}\" }" }, "url": "{{baseUrl}}/academic-years/{{academicYearId}}/classes/{{classId}}/sections/{{sectionId}}/class-teacher" } },

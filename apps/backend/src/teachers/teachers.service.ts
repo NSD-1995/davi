@@ -75,7 +75,7 @@ export class TeachersService {
     const schoolClass = await this.prisma.schoolClass.findFirst({ where: { id: data.classId, schoolId, academicYearId: data.academicYearId } }); if (!schoolClass) throw new BadRequestException('Class must belong to the selected academic year.');
     if (data.sectionId && !await this.prisma.section.findFirst({ where: { id: data.sectionId, schoolId, classId: data.classId } })) throw new BadRequestException('Section must belong to the selected class.');
     if (data.isClassTeacher && !data.sectionId) throw new BadRequestException('A class-teacher assignment requires a section.');
-    if (data.subjectId && !await this.prisma.academicYearSubject.findFirst({ where: { academicYearId: data.academicYearId, subjectId: data.subjectId, schoolId } })) throw new BadRequestException('Subject must be assigned to the selected academic year.');
+    if (data.subjectId && !await this.prisma.classSubject.findFirst({ where: { academicYearId: data.academicYearId, classId: data.classId, subjectId: data.subjectId, schoolId } })) throw new BadRequestException('Subject is not assigned to the selected class for this academic year.');
     if (!data.subjectId && !data.isClassTeacher) throw new BadRequestException('Select a subject or mark the teacher as class teacher.');
     const duplicate = await this.prisma.teacherAcademicAssignment.findFirst({ where: { teacherId, academicYearId: data.academicYearId, classId: data.classId, sectionId: data.sectionId ?? null, subjectId: data.subjectId ?? null, isClassTeacher: data.isClassTeacher ?? false } });
     if (duplicate) throw new ConflictException('This teacher academic assignment already exists.');

@@ -1,4 +1,4 @@
-import { BadRequestException, ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
+import { BadRequestException, ConflictException, ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateClassesBulkDto, CreateSchoolClassDto, SchoolClassStatus, UpdateSchoolClassDto } from './classes.dto';
 
@@ -46,6 +46,7 @@ export class SchoolClassesService {
     this.requireSchoolId(schoolId);
     this.validateSectionCount(data.numberOfSections);
     this.validateStatus(data.status);
+    const subjectIds = this.validateSubjectIds(data.subjectIds ?? []);
 
     const school = await this.prisma.school.findUnique({ where: { id: schoolId } });
     if (!school) {
@@ -58,6 +59,7 @@ export class SchoolClassesService {
     if (!academicYear) {
       throw new NotFoundException('Academic year not found for your school.');
     }
+    await this.validateActiveSubjects(schoolId, subjectIds);
 
     return this.prisma.$transaction(async (tx) => {
       const schoolClass = await tx.schoolClass.create({
@@ -83,10 +85,15 @@ export class SchoolClassesService {
           })),
         });
       }
+      if (subjectIds.length) {
+        await tx.classSubject.createMany({
+          data: subjectIds.map((subjectId) => ({ schoolId, academicYearId: data.academicYearId, classId: schoolClass.id, subjectId })),
+        });
+      }
 
       return tx.schoolClass.findUniqueOrThrow({
         where: { id: schoolClass.id },
-        include: { school: true, academicYear: true, sections: { orderBy: { name: 'asc' } } },
+        include: { school: true, academicYear: true, sections: { orderBy: { name: 'asc' } }, classSubjects: { include: { subject: true } } },
       });
     });
   }
@@ -189,6 +196,86 @@ export class SchoolClassesService {
     await this.findOne(id, schoolId);
 
     return this.prisma.schoolClass.delete({ where: { id } });
+  }
+
+  async findSubjects(schoolId: string | null, academicYearId: string, classId: string) {
+    this.requireSchoolId(schoolId);
+    await this.assertClassScope(schoolId, academicYearId, classId);
+    const mappings = await this.prisma.classSubject.findMany({
+      where: { schoolId, academicYearId, classId },
+      include: { subject: true },
+      orderBy: { subject: { name: 'asc' } },
+    });
+    return { academicYearId, classId, subjects: mappings.map((mapping) => mapping.subject) };
+  }
+
+  async availableSubjects(schoolId: string | null, academicYearId: string, classId: string) {
+    this.requireSchoolId(schoolId);
+    await this.assertClassScope(schoolId, academicYearId, classId);
+    const [subjects, assigned] = await Promise.all([
+      this.prisma.subject.findMany({ where: { schoolId, status: 'ACTIVE' }, orderBy: { name: 'asc' } }),
+      this.prisma.classSubject.findMany({ where: { schoolId, academicYearId, classId }, select: { subjectId: true } }),
+    ]);
+    const assignedIds = new Set(assigned.map((item) => item.subjectId));
+    return subjects.map((subject) => ({ ...subject, isAssigned: assignedIds.has(subject.id) }));
+  }
+
+  async replaceSubjects(schoolId: string | null, academicYearId: string, classId: string, data: { subjectIds: string[] }) {
+    this.requireSchoolId(schoolId);
+    await this.assertClassScope(schoolId, academicYearId, classId);
+    const subjectIds = this.validateSubjectIds(data.subjectIds);
+    await this.validateActiveSubjects(schoolId, subjectIds);
+    const existing = await this.prisma.classSubject.findMany({ where: { schoolId, academicYearId, classId }, select: { subjectId: true } });
+    const current = new Set(existing.map((item) => item.subjectId));
+    const desired = new Set(subjectIds);
+    const removed = [...current].filter((id) => !desired.has(id));
+    const added = subjectIds.filter((id) => !current.has(id));
+    if (removed.length) await this.assertSubjectsUnused(schoolId, academicYearId, classId, removed);
+    await this.prisma.$transaction(async (tx) => {
+      if (removed.length) await tx.classSubject.deleteMany({ where: { schoolId, academicYearId, classId, subjectId: { in: removed } } });
+      if (added.length) await tx.classSubject.createMany({ data: added.map((subjectId) => ({ schoolId, academicYearId, classId, subjectId })) });
+    });
+    return this.findSubjects(schoolId, academicYearId, classId);
+  }
+
+  async validateSubjectAssignedToClass(schoolId: string, academicYearId: string, classId: string, subjectId: string) {
+    const assignment = await this.prisma.classSubject.findFirst({ where: { schoolId, academicYearId, classId, subjectId } });
+    if (!assignment) throw new BadRequestException('Subject is not assigned to the selected class for this academic year.');
+    return assignment;
+  }
+
+  private async assertClassScope(schoolId: string, academicYearId: string, classId: string) {
+    const [year, schoolClass] = await Promise.all([
+      this.prisma.academicYear.findFirst({ where: { id: academicYearId, schoolId } }),
+      this.prisma.schoolClass.findFirst({ where: { id: classId, schoolId, academicYearId } }),
+    ]);
+    if (!year) throw new NotFoundException('Academic year not found for your school.');
+    if (!schoolClass) throw new BadRequestException('Class must belong to the selected academic year.');
+  }
+
+  private validateSubjectIds(value: unknown): string[] {
+    if (!Array.isArray(value)) throw new BadRequestException('subjectIds must be an array.');
+    if (value.some((id) => typeof id !== 'string' || !/^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(id))) throw new BadRequestException('Every subjectId must be a UUID v4.');
+    if (new Set(value).size !== value.length) throw new BadRequestException('subjectIds must not contain duplicates.');
+    return value;
+  }
+
+  private async validateActiveSubjects(schoolId: string, subjectIds: string[]) {
+    if (!subjectIds.length) return;
+    const subjects = await this.prisma.subject.findMany({ where: { id: { in: subjectIds }, schoolId } });
+    if (subjects.length !== subjectIds.length) throw new BadRequestException('Every subject must belong to your school.');
+    const inactive = subjects.filter((subject) => subject.status !== 'ACTIVE');
+    if (inactive.length) throw new BadRequestException(`Only active subjects can be assigned: ${inactive.map((subject) => subject.name).join(', ')}.`);
+  }
+
+  private async assertSubjectsUnused(schoolId: string, academicYearId: string, classId: string, subjectIds: string[]) {
+    const [teachers, timetable, exams] = await Promise.all([
+      this.prisma.teacherAcademicAssignment.count({ where: { schoolId, academicYearId, classId, subjectId: { in: subjectIds } } }),
+      this.prisma.timetableEntry.count({ where: { schoolId, academicYearId, classId, subjectId: { in: subjectIds } } }),
+      this.prisma.examSubject.count({ where: { classId, subjectId: { in: subjectIds }, exam: { schoolId, academicYearId } } }),
+    ]);
+    const dependencies = [...(teachers ? ['teacher assignments'] : []), ...(timetable ? ['timetable entries'] : []), ...(exams ? ['exams or marks'] : [])];
+    if (dependencies.length) throw new ConflictException(`Cannot remove the selected subjects because they are used by ${dependencies.join(', ')}. Remove those academic records first.`);
   }
 
   private requireSchoolId(schoolId: string | null): asserts schoolId is string {

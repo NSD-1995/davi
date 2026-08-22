@@ -59,6 +59,7 @@ model School {
   sections             Section[]
   subjects             Subject[]
   academicYearSubjects AcademicYearSubject[]
+  classSubjects        ClassSubject[]
   students             Student[]
   teachers             Teacher[]
   parents              Parent[]
@@ -189,6 +190,7 @@ model AcademicYear {
 
   schoolClasses        SchoolClass[]
   academicYearSubjects AcademicYearSubject[]
+  classSubjects        ClassSubject[]
   studentEnrollments   StudentEnrollment[]
   teacherAssignments   TeacherAcademicAssignment[]
   timetableEntries     TimetableEntry[]
@@ -215,6 +217,7 @@ model SchoolClass {
   teacherAssignments TeacherAcademicAssignment[]
   timetableEntries   TimetableEntry[]
   examSubjects       ExamSubject[]
+  classSubjects      ClassSubject[]
 
   @@unique([schoolId, academicYearId, name])
 }
@@ -250,6 +253,7 @@ model Subject {
   updatedAt   DateTime @updatedAt
 
   academicYearSubjects AcademicYearSubject[]
+  classSubjects        ClassSubject[]
   teacherAssignments   TeacherAcademicAssignment[]
   timetableEntries     TimetableEntry[]
   examSubjects         ExamSubject[]
@@ -286,6 +290,24 @@ model AcademicYearSubject {
 
   @@unique([academicYearId, subjectId])
   @@index([schoolId])
+  @@index([subjectId])
+}
+
+model ClassSubject {
+  id             String       @id @default(uuid())
+  schoolId       String
+  academicYearId String
+  classId        String
+  subjectId      String
+  school         School       @relation(fields: [schoolId], references: [id], onDelete: Restrict)
+  academicYear   AcademicYear @relation(fields: [academicYearId], references: [id], onDelete: Restrict)
+  schoolClass    SchoolClass  @relation(fields: [classId], references: [id], onDelete: Restrict)
+  subject        Subject      @relation(fields: [subjectId], references: [id], onDelete: Restrict)
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+
+  @@unique([academicYearId, classId, subjectId])
+  @@index([schoolId, academicYearId, classId])
   @@index([subjectId])
 }
 
@@ -424,25 +446,32 @@ model Teacher {
 }
 
 model TeacherAcademicAssignment {
-  id             String       @id @default(uuid())
-  schoolId       String
-  teacherId      String
-  academicYearId String
-  classId        String
-  sectionId      String?
-  subjectId      String?
-  isClassTeacher Boolean      @default(false)
-  school         School       @relation(fields: [schoolId], references: [id], onDelete: Cascade)
-  teacher        Teacher      @relation(fields: [teacherId], references: [id], onDelete: Cascade)
-  academicYear   AcademicYear @relation(fields: [academicYearId], references: [id], onDelete: Restrict)
-  schoolClass    SchoolClass  @relation(fields: [classId], references: [id], onDelete: Restrict)
-  section        Section?     @relation(fields: [sectionId], references: [id], onDelete: Restrict)
-  subject        Subject?     @relation(fields: [subjectId], references: [id], onDelete: Restrict)
-  createdAt      DateTime     @default(now())
-  updatedAt      DateTime     @updatedAt
+  id                 String       @id @default(uuid())
+  schoolId           String
+  teacherId          String
+  academicYearId     String
+  classId            String
+  sectionId          String?
+  subjectId          String?
+  isClassTeacher     Boolean      @default(false)
+  responsibilityType String       @default("SUBJECT_TEACHER")
+  assignmentRole     String?
+  isActive           Boolean      @default(true)
+  startDate          DateTime?
+  endDate            DateTime?
+  school             School       @relation(fields: [schoolId], references: [id], onDelete: Cascade)
+  teacher            Teacher      @relation(fields: [teacherId], references: [id], onDelete: Cascade)
+  academicYear       AcademicYear @relation(fields: [academicYearId], references: [id], onDelete: Restrict)
+  schoolClass        SchoolClass  @relation(fields: [classId], references: [id], onDelete: Restrict)
+  section            Section?     @relation(fields: [sectionId], references: [id], onDelete: Restrict)
+  subject            Subject?     @relation(fields: [subjectId], references: [id], onDelete: Restrict)
+  createdAt          DateTime     @default(now())
+  updatedAt          DateTime     @updatedAt
 
   @@index([schoolId, academicYearId, teacherId])
   @@index([classId, sectionId, subjectId])
+  @@index([schoolId, academicYearId, classId, sectionId, isActive])
+  @@index([teacherId, academicYearId, isActive])
 }
 
 model TimePeriod {

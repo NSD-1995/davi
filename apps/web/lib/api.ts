@@ -24,6 +24,10 @@ export const schoolSettingsApi = {
   update: (t: string, id: string, data: Record<string, unknown>) => request<Record<string, unknown>>(`/school-settings/${id}`, { method: 'PATCH', body: json(data) }, t),
 };
 export const timetableApi = { list: (t: string, yearId: string, classId: string, sectionId: string) => request<Record<string, unknown>[]>(`/timetable/entries?academicYearId=${yearId}&classId=${classId}&sectionId=${sectionId}`, {}, t) };
+export const attendanceApi = {
+  list: (t:string,classId:string,sectionId:string,from:string,to:string) => request<Array<{id:string;enrollmentId:string;date:string;status:string;remarks?:string|null}>>(`/attendance/students?classId=${classId}&sectionId=${sectionId}&from=${from}&to=${to}`,{},t),
+  mark: (t:string,date:string,records:Array<{enrollmentId:string;status:string;remarks?:string}>) => request('/attendance/students',{method:'POST',body:json({date,records})},t),
+};
 export const examApi = { list: (t: string, yearId: string) => request<Record<string, unknown>[]>(`/exams?academicYearId=${yearId}`, {}, t), results: (t: string, examId: string, classId: string) => request<Record<string, unknown>[]>(`/exams/${examId}/results?classId=${classId}`, {}, t) };
 export const eventApi = { list: (t: string) => request<Record<string, unknown>[]>('/events', {}, t) };
 export const reportApi = { students: (t: string, yearId: string, classId: string) => request<Record<string, unknown>[]>(`/reports/students?academicYearId=${yearId}&classId=${classId}`, {}, t) };
@@ -44,13 +48,21 @@ export const classApi = {
   create: (t: string, data: Record<string, unknown>) => request<SchoolClass>('/classes', { method: 'POST', body: json(data) }, t),
   update: (t: string, id: string, data: Record<string, unknown>) => request<SchoolClass>(`/classes/${id}`, { method: 'PATCH', body: json(data) }, t),
   bulk: (t: string, data: Record<string, unknown>) => request('/classes/bulk', { method: 'POST', body: json(data) }, t),
+  assignedSubjects: (t: string, yearId: string, classId: string) => request<{ academicYearId: string; classId: string; subjects: Subject[] }>(`/academic-years/${yearId}/classes/${classId}/subjects`, {}, t),
+  availableSubjects: (t: string, yearId: string, classId: string) => request<Array<Subject & { isAssigned: boolean }>>(`/academic-years/${yearId}/classes/${classId}/available-subjects`, {}, t),
+  replaceSubjects: (t: string, yearId: string, classId: string, subjectIds: string[]) => request<{ academicYearId: string; classId: string; subjects: Subject[] }>(`/academic-years/${yearId}/classes/${classId}/subjects`, { method: 'PUT', body: json({ subjectIds }) }, t),
 };
 export const classWorkspaceApi = {
   list: (t: string, yearId: string) => request<ClassWorkspace[]>(`/academic-years/${yearId}/class-workspaces`, {}, t),
-  dashboard: (t: string, yearId: string, classId: string, sectionId: string) => request<SectionDashboard>(`/academic-years/${yearId}/classes/${classId}/sections/${sectionId}/dashboard`, {}, t),
+  dashboard: (t: string, yearId: string, classId: string, sectionId: string) => request<SectionDashboard>(`/academic-years/${yearId}/classes/${classId}/sections/${sectionId}/dashboard`, { cache: 'no-store' }, t),
   students: (t: string, yearId: string, classId: string, sectionId: string) => request<SectionDashboard['recentStudents']>(`/academic-years/${yearId}/classes/${classId}/sections/${sectionId}/students`, {}, t),
   classTeacher: (t: string, yearId: string, classId: string, sectionId: string, teacherId: string) => request(`/academic-years/${yearId}/classes/${classId}/sections/${sectionId}/class-teacher`, { method: 'PUT', body: json({ teacherId }) }, t),
   admit: (t: string, data: Record<string, unknown>) => request('/student-admissions', { method: 'POST', body: json(data) }, t),
+  teachingTeam: (t:string,y:string,c:string,s:string) => request<{members:Array<Record<string,unknown>>}>(`/academic-years/${y}/classes/${c}/sections/${s}/teaching-team`,{},t),
+  saveTeachingTeam: (t:string,y:string,c:string,s:string,members:Array<{staffId:string;responsibilityType:string}>) => request(`/academic-years/${y}/classes/${c}/sections/${s}/teaching-team`,{method:'PUT',body:json({members})},t),
+  subjectTeachers: (t:string,y:string,c:string,s:string) => request<{assignments:Array<Record<string,unknown>>}>(`/academic-years/${y}/classes/${c}/sections/${s}/subject-teachers`,{},t),
+  saveSubjectTeachers: (t:string,y:string,c:string,s:string,assignments:Array<{subjectId:string;staffId:string;assignmentRole:string}>) => request(`/academic-years/${y}/classes/${c}/sections/${s}/subject-teachers`,{method:'PUT',body:json({assignments})},t),
+  workload: (t:string,y:string,staffId:string) => request<Record<string,number|string>>(`/academic-years/${y}/staff/${staffId}/workload`,{},t),
 };
 export const sectionApi = {
   create: (t: string, data: Record<string, unknown>) => request<Section>('/sections', { method: 'POST', body: json(data) }, t),

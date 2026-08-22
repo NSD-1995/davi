@@ -7,6 +7,9 @@ const codes = [
   'CLASS_VIEW', 'CLASS_CREATE', 'CLASS_UPDATE', 'CLASS_DELETE',
   'SECTION_VIEW', 'SECTION_CREATE', 'SECTION_UPDATE', 'SECTION_DELETE',
   'SUBJECT_VIEW', 'SUBJECT_CREATE', 'SUBJECT_UPDATE', 'SUBJECT_DELETE',
+  'CLASS_SUBJECT_VIEW', 'CLASS_SUBJECT_MANAGE',
+  'TEACHING_TEAM_VIEW', 'TEACHING_TEAM_MANAGE', 'SUBJECT_TEACHER_VIEW', 'SUBJECT_TEACHER_MANAGE',
+  'CLASS_ATTENDANCE_MANAGE', 'CLASS_OBSERVATION_MANAGE', 'SUBJECT_HOMEWORK_MANAGE', 'SUBJECT_MARKS_MANAGE',
   'STAFF_VIEW', 'STAFF_CREATE', 'STAFF_UPDATE', 'STAFF_DELETE',
   'ROLE_VIEW', 'ROLE_CREATE', 'ROLE_UPDATE', 'ROLE_DELETE', 'ROLE_PERMISSION_MANAGE',
   'STUDENT_VIEW', 'STUDENT_CREATE', 'STUDENT_UPDATE', 'STUDENT_DELETE',
@@ -23,6 +26,16 @@ async function main() {
     await prisma.permission.upsert({
       where: { code }, update: {},
       create: { code, module: code.slice(0, separator), action: code.slice(separator + 1), description: code.toLowerCase().replaceAll('_', ' ') },
+    });
+  }
+  const [schoolAdminRoles, permissions] = await Promise.all([
+    prisma.role.findMany({ where: { code: 'SCHOOL_ADMIN' }, select: { id: true } }),
+    prisma.permission.findMany({ select: { id: true } }),
+  ]);
+  if (schoolAdminRoles.length && permissions.length) {
+    await prisma.rolePermission.createMany({
+      data: schoolAdminRoles.flatMap((role) => permissions.map((permission) => ({ roleId: role.id, permissionId: permission.id }))),
+      skipDuplicates: true,
     });
   }
 }

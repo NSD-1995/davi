@@ -8,6 +8,11 @@ export class CreateSchoolClassDto {
   status?: SchoolClassStatus;
   numberOfSections?: number;
   sectionCapacity?: number;
+  subjectIds?: string[];
+}
+
+export class ReplaceClassSubjectsDto {
+  subjectIds!: string[];
 }
 
 export class CreateClassesBulkDto {
