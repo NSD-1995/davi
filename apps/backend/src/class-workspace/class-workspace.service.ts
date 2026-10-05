@@ -33,6 +33,7 @@ export class ClassWorkspaceService {
             include: {
               user: { select: { id: true, firstName: true, lastName: true, phone: true, email: true } },
               studentParents: {
+                where: { status: 'ACTIVE' },
                 include: {
                   parent: {
                     include: {
@@ -48,7 +49,7 @@ export class ClassWorkspaceService {
       }),
       this.prisma.teacherAcademicAssignment.findMany({ where: { schoolId: schoolId!, academicYearId, classId, sectionId }, include: { teacher: { include: { user: { select: { id: true, firstName: true, lastName: true } } } }, subject: true } }),
       this.prisma.studentAttendance.findMany({ where: { schoolId: schoolId!, date: today, enrollment: { academicYearId, classId, sectionId, status: 'ACTIVE' } }, select: { status: true } }),
-      this.prisma.classSubject.findMany({ where: { schoolId: schoolId!, academicYearId, classId }, include: { subject: true } }),
+      this.prisma.classSubject.findMany({ where: { schoolId: schoolId!, academicYearId, classId, isActive: true, subject: { status: 'ACTIVE' } }, include: { subject: true }, orderBy: { displayOrder: 'asc' } }),
       this.prisma.exam.findMany({ where: { schoolId: schoolId!, academicYearId, startDate: { gte: today } }, orderBy: { startDate: 'asc' }, take: 5 }),
       this.prisma.schoolEvent.findMany({ where: { schoolId: schoolId!, startsAt: { gte: today }, status: 'ACTIVE' }, orderBy: { startsAt: 'asc' }, take: 5 }),
     ]);

@@ -1,80 +1,158 @@
 # DAVI API testing workflow
 
-Import `postman-school-api.json` into Postman. It defaults to `http://localhost:3001/api/v1`; change the collection's `baseUrl` variable if the API runs elsewhere. The collection applies `Authorization: Bearer {{token}}` globally.
+Import `postman-school-api.json` into Postman. The collection defaults to `http://localhost:3001/api/v1` and applies `Authorization: Bearer {{token}}` globally. Requests that require the parent account override this with `{{parentToken}}`.
 
 ## Start the API
 
-1. Start PostgreSQL and configure `DATABASE_URL` for the backend.
-2. From the repository root, run `npm run prisma:generate --workspace=@davi/backend`, then apply migrations with `npm run prisma:migrate --workspace=@davi/backend` when needed.
-3. Run `npm run start:dev --workspace=@davi/backend`.
-4. Confirm `GET {{baseUrl}}` responds before starting the workflow.
+1. Configure PostgreSQL and `DATABASE_URL`.
+2. Back up any existing database.
+3. Generate Prisma Client and apply migrations, including the school-state and global-parent/student-identity migrations.
+4. Run the Prisma seed so permission records exist.
+5. Start the backend and confirm `GET {{baseUrl}}` responds.
 
-## First-run order
+From the repository root:
 
-1. Run **Register platform super-admin**. It stores its JWT in `token`.
-2. Run **Create school**. It requires that super-admin JWT and stores `schoolId` and the generated school-admin temporary password.
-3. Run **Login as school admin**, then **Change school admin password**. Login stores the school-admin JWT.
-4. Run the remaining setup requests: settings, academic year, class, section, and subject. Their response scripts store dependent IDs.
-5. Use each resource folder for the full CRUD and lookup endpoints.
+```powershell
+npm.cmd --workspace apps/backend run prisma:generate
+npm.cmd --workspace apps/backend run prisma:migrate
+npm.cmd --workspace apps/backend run start:dev
+```
 
-## Authorization currently implemented
+## First school setup
 
-Only these endpoints enforce authorization in the current backend:
+Run **00 — Setup workflow** in order:
 
-- `POST /schools` — `super-admin`
-- All `/schools/:schoolId/profile-options` and `/schools/:schoolId/users/:userId/profile-options` endpoints — `super-admin` or `school-admin`
-- `POST /auth/change-password` — any valid JWT
-- All `/academic-years` endpoints — `school-admin`, restricted to the admin's assigned school
-- All `/classes` and `/sections` endpoints — `school-admin`, restricted to the admin's assigned school
+1. Register the platform Super Admin.
+2. Create a school. The test script stores its ID and one-time School Admin password.
+3. Login as School Admin and change the temporary password.
+4. Create settings. Do not send `schoolId`; it is derived from the authenticated user.
+5. Create the academic year, class, sections, and subjects.
 
-Other endpoints are currently public. The collection preserves that behavior; this is an implementation status, not a recommended production permission model.
+School Admins should read and update their own profile using:
 
-## Important testing notes
+```http
+GET /schools/me/profile
+PATCH /schools/me/profile
+```
 
-- School creation produces a unique, random temporary password and returns it once. The collection captures it automatically.
-- `POST /users` expects an already hashed `passwordHash`; use `POST /auth/register` for normal user creation with a plaintext password.
-- A user can be only one of student, teacher, or parent because each profile has a unique `userId`. Create distinct users before exercising all three People flows.
-- Creating a class requires an `academicYearId` from the school admin's school. Add `numberOfSections` to create numbered sections automatically; for example, `3` creates sections `1`, `2`, and `3`. Deleting a class cascades to its sections.
-- For onboarding, use `POST /classes/bulk` to create class groups for one academic year in one request. Enable any of `montessori` (Play School, Nursery, LKG, UKG), `primary` (1st–5th), `secondary` (6th–10th), and `seniorSecondary` (11th–12th). Send one `numberOfSections` value and every created class receives that many numbered sections. Use the normal class and section CRUD endpoints later to edit or delete a specific class or section from the dashboard.
-- Classes accept only `ACTIVE` or `INACTIVE` status. The dashboard can call `GET /classes?status=ACTIVE` for its default list and `GET /classes?status=INACTIVE` for archived classes. Inactive classes cannot receive new sections until reactivated.
-- The destructive requests are intentionally present for coverage. Run them only after dependent data checks; deleting a school cascades to its related records.
+The `/schools/:id` CRUD routes are platform Super Admin routes. School Admin clients must not use them for their own profile.
 
-## Subject management sequence
+## Authentication and authorization
 
-Subject and academic-year subject endpoints require a school-admin JWT and are restricted to that admin's school. Run **Create Subject**, **Assign Subjects**, **Get Subjects By Academic Year**, and **Remove Subject From Academic Year** in that order. Removing an assignment leaves the master subject intact; a master subject cannot be deleted while any academic-year assignment remains. Valid subject statuses are `ACTIVE` and `INACTIVE`; valid types are `CORE`, `ELECTIVE`, and `OPTIONAL`.
+Protected routes require a JWT, the appropriate permission, and a valid school context. School operations derive school identity from the authenticated user wherever possible. Supplying another school's ID does not change the scope and cross-school records return `403` or `404`.
 
-Class delivery is configured with **Get Class Subjects**, **Get Available Class Subjects**, and **Replace Class Subjects**. The mapping belongs to one academic year and class and is inherited by every section. Removing a subject is rejected with `409 Conflict` while teacher assignments, timetable entries, exams, or marks still reference it.
+New staff, School Admin, and newly created parent accounts must change their temporary password before accessing normal protected operations.
 
-Section staffing uses **Get/Replace Teaching Team** and **Get/Replace Subject Teachers**. Assignment replacement retains removed rows as inactive history. Lead and primary-teacher uniqueness is enforced per section, while assistants and support teachers remain unlimited by default.
+## Academic and admission workflow
 
-## Roles, permissions, and staff sequence
+The main operating sequence is:
 
-1. Apply the roles/permissions migration and run the Prisma seed before testing.
-2. Login as the school admin; the protected `SCHOOL_ADMIN` role has full school access.
-3. Run **List Permissions**, then **Create Role** and **Update Role Permissions**.
-4. Run **Create Staff**. The response stores the one-time temporary password and staff ID in collection variables.
-5. Run **Staff Login** using the mobile username. DAVI returns `requiresPasswordChange: true` and blocks other protected features until **Change First-Time Password** succeeds.
-6. Run **Current User / Permissions** and confirm the assigned role and permission codes.
-7. Test permitted and non-permitted endpoints. Missing permissions return `403 Forbidden`, and School A users cannot manage School B paths.
+1. Academic Year
+2. Subjects and Academic-Year Subjects
+3. Classes and Sections
+4. Class Subjects and Teaching Team
+5. Student Admission
+6. Parent Relationships
+7. Attendance, timetable, exams, events, reports, notifications, and audit
 
-Staff academic-year, class, section, and subject responsibilities are intentionally separate from access roles and are not part of this workflow.
+Student identity is global. School placement belongs to `StudentEnrollment`, which contains school, academic year, class, section, admission number, and roll number. Admission numbers are unique per school and academic year.
 
-## Complete school operations workflow
+The **Student Admissions** request stores `studentId`, `enrollmentId`, `parentEnrollmentId`, and the primary `parentId` for later requests.
 
-After school setup, run the extended folders in this order:
+## Global parent and multi-school workflow
 
-1. **Student Enrollment** — place each Student into one Academic Year, Class, and Section. A Student may have one enrollment per Academic Year.
-2. **Parent Onboarding** — generate a Parent mobile login, link one or more Students, and select the primary guardian. Parents can use `GET /parents/me/students` after their first-time password change.
-3. **Teacher Academic Assignments** — assign Teacher profiles to Academic Year, Class, optional Section, Subject, or class-teacher responsibility. Staff created with a role code containing `TEACHER` automatically receives a Teacher profile.
-4. **Attendance** — bulk mark enrolled Student attendance or mark Staff attendance. Repeating the same date updates the existing daily record.
-5. **Timetable** — create ordered time periods, then create entries. The backend rejects Section and Teacher period conflicts and requires a matching Teacher academic assignment.
-6. **Exams and Marks** — create an Exam, configure Class Subjects and maximum/passing marks, enter marks in bulk, and retrieve calculated pass/fail results.
-7. **Events** — maintain the school calendar and audience information.
-8. **Dashboard and Reports** — retrieve school summary counts, current-day attendance, upcoming events, and export-ready Student, Staff, and attendance datasets.
-9. **Notifications and Audit** — create in-app/external-channel notification queue records, mark them read/sent, and inspect automatically recorded mutation audit logs.
+One mobile number represents one global parent login. A parent may own multiple child relationships and those children may have enrollments in different schools.
 
-External Email, SMS, and WhatsApp delivery requires a provider adapter and credentials. DAVI currently persists a reliable notification outbox and delivery state; `IN_APP` notifications work without an external provider.
+### New parent
 
-## New permission codes
+Run **Create or Reuse Global Parent Login** with an unused mobile number. The response contains:
 
-Run `npx prisma db seed` after migrations so custom roles can receive `CLASS_SUBJECT_VIEW`, `CLASS_SUBJECT_MANAGE`, `EVENT_VIEW`, `EVENT_MANAGE`, `NOTIFICATION_VIEW`, `NOTIFICATION_MANAGE`, and `AUDIT_VIEW`, in addition to the existing Attendance, Timetable, Exam, Marks, Dashboard, and Report permissions.
+```json
+{
+  "parent": {
+    "id": "...",
+    "verificationStatus": "VERIFIED"
+  },
+  "credentials": {
+    "username": "9876543211",
+    "temporaryPassword": "..."
+  },
+  "verificationRequired": false
+}
+```
+
+The Postman test stores the parent ID and temporary password. Login using **Parent Login**, change the first-time password when required, and store the returned token in `parentToken`.
+
+### Existing parent at another school
+
+When another school submits the same mobile number, DAVI reuses the global `User` and `Parent` profile. The new school membership is created as `PENDING`:
+
+```json
+{
+  "credentials": null,
+  "verificationRequired": true,
+  "parent": {
+    "verificationStatus": "PENDING"
+  }
+}
+```
+
+The existing password remains unchanged. Linking through `POST /parents/:parentId/students` returns `403` until consent verification is complete. OTP delivery and confirmation are not implemented yet, so do not manually mark production memberships verified.
+
+### Relationship permissions
+
+The link request supports:
+
+```json
+{
+  "studentId": "{{studentId}}",
+  "relationshipType": "FATHER",
+  "isPrimary": true,
+  "canPickup": true,
+  "canViewAcademics": true,
+  "canPayFees": false
+}
+```
+
+The student must have an active enrollment in the authenticated staff user's school. Duplicate links return `409 Conflict`.
+
+### Isolation checks
+
+Use **List School-Visible Parents** and verify that it includes only children/enrollments belonging to the current school. It must never expose another school's enrollment data.
+
+Use **Reject Unowned Enrollment** with a parent token and confirm `403 Forbidden`.
+
+## Parent portal workflow
+
+The parent endpoints use the parent token, not the School Admin token:
+
+```http
+GET /parent/me/children
+GET /parent/enrollments/:enrollmentId/dashboard
+GET /parent/enrollments/:enrollmentId/attendance
+```
+
+`GET /parent/me/children` returns active child relationships across schools. Its Postman test stores the first active enrollment as `parentEnrollmentId`.
+
+Every enrollment request verifies:
+
+- The JWT belongs to a Parent profile.
+- The requested enrollment belongs to a linked child.
+- The relationship is active.
+- `canViewAcademics` is enabled.
+
+Future homework, results, fees, events, and messages endpoints should use the same enrollment-scoped authorization pattern.
+
+## Destructive requests
+
+Delete and unlink requests are included for coverage. Run them only after dependent tests. Removing a parent from a school deletes the school membership, not the global parent identity or relationships owned by other schools.
+
+## Expected validation responses
+
+- `400` — malformed mobile, academic mismatch, duplicate input in one request, or invalid marks/times.
+- `401` — missing, invalid, or expired JWT.
+- `403` — missing permission, cross-school access, unowned parent enrollment, or pending consent verification.
+- `404` — school-scoped record does not exist.
+- `409` — duplicate mobile/email, parent code, admission number, enrollment, or parent-child link.
+
+Email, SMS, WhatsApp, OTP delivery, homework, fees, and the remaining parent dashboard modules still require their provider/domain implementations.

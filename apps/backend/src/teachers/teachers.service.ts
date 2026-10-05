@@ -9,7 +9,11 @@ export class TeachersService {
   async findAll(schoolId: string | null) {
     this.requireSchool(schoolId);
     const teachers = await this.prisma.teacher.findMany({
-      where: { schoolId },
+      where: {
+        schoolId,
+        status: 'ACTIVE',
+        user: { status: 'ACTIVE', staff: { is: { status: 'ACTIVE' } } },
+      },
       include: {
         user: true,
         school: true,
@@ -39,8 +43,8 @@ export class TeachersService {
   async create(schoolId: string | null, data: CreateTeacherDto) {
     this.requireSchool(schoolId);
     if (data.schoolId !== schoolId) throw new ForbiddenException('You can only create teachers for your own school.');
-    const staff = await this.prisma.staff.findFirst({ where: { userId: data.userId, schoolId } });
-    if (!staff) throw new NotFoundException('A Staff profile must exist before creating a Teacher profile.');
+    const staff = await this.prisma.staff.findFirst({ where: { userId: data.userId, schoolId, status: 'ACTIVE', user: { status: 'ACTIVE' } } });
+    if (!staff) throw new NotFoundException('An active Staff profile must exist before creating a Teacher profile.');
     return this.prisma.teacher.create({
       data: {
         ...data,

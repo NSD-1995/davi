@@ -1,5 +1,4 @@
 export class CreateSchoolSettingDto {
-  schoolId?: string;
   schoolName?: string;
   timezone?: string;
   language?: string;

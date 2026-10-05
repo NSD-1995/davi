@@ -101,15 +101,19 @@ function classSubjectPrisma() {
     schoolClass: { findFirst: async () => ({ id: 'class-1', schoolId: school.id, academicYearId: year.id }) },
     subject: { findMany: async ({ where }) => (where.id?.in || [uuidSubject, uuidOtherSubject]).map(id => ({ ...subject, id, status: 'ACTIVE' })) },
     classSubject: {
-      findMany: async (args) => args.select ? assigned.map(subjectId => ({ subjectId })) : assigned.map(subjectId => ({ subject: { ...subject, id: subjectId } })),
+      findMany: async (args) => args.select ? assigned.map(subjectId => ({ id: `map-${subjectId}`, subjectId, isActive: true })) : assigned.map(subjectId => ({ subject: { ...subject, id: subjectId } })),
       findFirst: async ({ where }) => assigned.includes(where.subjectId) ? { subjectId: where.subjectId } : null,
     },
     teacherAcademicAssignment: { count: async () => 0 }, timetableEntry: { count: async () => 0 }, examSubject: { count: async () => 0 },
     $transaction: async callback => callback({
       classSubject: {
-        deleteMany: async ({ where }) => { assigned = assigned.filter(id => !where.subjectId.in.includes(id)); },
-        createMany: async ({ data }) => { assigned.push(...data.map(item => item.subjectId)); },
+        updateMany: async ({ where }) => { assigned = assigned.filter(id => !where.subjectId.in.includes(id)); },
+        update: async () => ({}),
+        create: async ({ data }) => { assigned.push(data.subjectId); },
       },
+      subjectTimetableRequirement: { deleteMany: async () => ({}) },
+      teacherAcademicAssignment: { updateMany: async () => ({}) },
+      timetableEntry: { updateMany: async () => ({}) },
     }),
   };
   return prisma;
@@ -122,10 +126,11 @@ test('retrieves and replaces class subjects transactionally', async () => {
   assert.deepEqual(result.subjects.map(item => item.id), [uuidOtherSubject]);
 });
 
-test('rejects duplicate class subject IDs and blocks referenced removals', async () => {
+test('rejects duplicate class subject IDs and safely unassigns referenced subjects', async () => {
   const prisma = classSubjectPrisma();
   const service = new SchoolClassesService(prisma);
   await assert.rejects(() => service.replaceSubjects(school.id, year.id, 'class-1', { subjectIds: [uuidSubject, uuidSubject] }), BadRequestException);
   prisma.teacherAcademicAssignment.count = async () => 1;
-  await assert.rejects(() => service.replaceSubjects(school.id, year.id, 'class-1', { subjectIds: [] }), ConflictException);
+  const result=await service.replaceSubjects(school.id, year.id, 'class-1', { subjectIds: [] });
+  assert.deepEqual(result.subjects,[]);
 });

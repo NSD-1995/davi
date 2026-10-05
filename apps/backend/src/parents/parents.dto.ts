@@ -14,6 +14,10 @@ export class UpdateParentDto {
   occupation?: string;
   relationshipToStudent?: string;
   status?: 'ACTIVE' | 'INACTIVE';
+  firstName?: string;
+  lastName?: string;
+  mobile?: string;
+  email?: string;
 }
 
 export class OnboardParentDto {
@@ -29,4 +33,7 @@ export class LinkParentStudentDto {
   studentId!: string;
   relationshipType?: string;
   isPrimary?: boolean;
+  canPickup?: boolean;
+  canViewAcademics?: boolean;
+  canPayFees?: boolean;
 }

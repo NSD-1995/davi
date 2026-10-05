@@ -1,0 +1,40 @@
+.teacher-class-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px;
+}
+
+.assignment-card {
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  padding: 18px;
+  background: #fbfdfd;
+}
+
+.assignment-card h3 { margin: 7px 0 3px; }
+.assignment-card > .button { margin-top: 15px; }
+.dashboard-section { margin-top: 18px; }
+
+.attendance-mini {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+  margin-top: 14px;
+}
+
+.attendance-mini span {
+  background: var(--teal-soft);
+  padding: 10px;
+  border-radius: 8px;
+}
+
+.attendance-mini strong,
+.attendance-mini small { display: block; }
+.attendance-mini small { font-size: .66rem; margin-top: 2px; }
+.record-link { color: var(--teal-dark); text-decoration: none; }
+.record-link:hover { text-decoration: underline; }
+.card + .card { margin-top: 18px; }
+
+@media (max-width: 760px) {
+  .teacher-class-grid { grid-template-columns: 1fr; }
+}

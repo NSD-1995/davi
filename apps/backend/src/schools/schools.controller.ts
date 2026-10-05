@@ -7,6 +7,7 @@ import {
   Patch,
   Post,
   UseGuards,
+  Req,
 } from '@nestjs/common';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { RequireRoles } from '../auth/roles.decorator';
@@ -25,6 +26,20 @@ import {
 @Controller('schools')
 export class SchoolsController {
   constructor(private readonly schoolsService: SchoolsService) {}
+
+  @Get('me/profile')
+  @UseGuards(JwtAuthGuard, PermissionsGuard)
+  @RequirePermissions('SCHOOL_PROFILE_VIEW')
+  findCurrent(@Req() req: any) {
+    return this.schoolsService.findCurrent(req.user.schoolId);
+  }
+
+  @Patch('me/profile')
+  @UseGuards(JwtAuthGuard, PermissionsGuard)
+  @RequirePermissions('SCHOOL_PROFILE_UPDATE')
+  updateCurrent(@Req() req: any, @Body() dto: UpdateSchoolDto) {
+    return this.schoolsService.updateCurrent(req.user.schoolId, dto);
+  }
 
   @Post()
   @UseGuards(JwtAuthGuard, RolesGuard)

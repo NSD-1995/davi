@@ -10,12 +10,12 @@ const { EventsService } = require('../dist/events/events.service');
 
 const schoolId = 'school-1';
 test('enrolls a student only in a matching academic-year class and section', async () => {
-  const prisma = { student: { findUnique: async () => ({ id: 'student-1', schoolId }) }, academicYear: { findFirst: async () => ({ id: 'year-1' }) }, schoolClass: { findFirst: async () => ({ id: 'class-1' }) }, section: { findFirst: async () => ({ id: 'section-1' }) }, studentEnrollment: { findUnique: async () => null, create: async ({ data }) => ({ id: 'enrollment-1', ...data }) } };
+  const prisma = { student: { findFirst: async () => ({ id: 'student-1', user: {}, enrollments: [{ schoolId, admissionNumber: 'ADM-1' }], studentParents: [] }) }, academicYear: { findFirst: async () => ({ id: 'year-1' }) }, schoolClass: { findFirst: async () => ({ id: 'class-1' }) }, section: { findFirst: async () => ({ id: 'section-1' }) }, studentEnrollment: { findUnique: async () => null, findFirst: async () => ({ admissionNumber: 'ADM-1' }), create: async ({ data }) => ({ id: 'enrollment-1', ...data }) } };
   const enrollment = await new StudentsService(prisma).enroll('student-1', schoolId, { academicYearId: 'year-1', classId: 'class-1', sectionId: 'section-1' });
   assert.equal(enrollment.schoolId, schoolId);
 });
 test('rejects duplicate student enrollment for an academic year', async () => {
-  const prisma = { student: { findUnique: async () => ({ id: 'student-1', schoolId }) }, academicYear: { findFirst: async () => ({}) }, schoolClass: { findFirst: async () => ({}) }, section: { findFirst: async () => ({}) }, studentEnrollment: { findUnique: async () => ({ id: 'existing' }) } };
+  const prisma = { student: { findFirst: async () => ({ id: 'student-1', user: {}, enrollments: [{ schoolId }], studentParents: [] }) }, academicYear: { findFirst: async () => ({}) }, schoolClass: { findFirst: async () => ({}) }, section: { findFirst: async () => ({}) }, studentEnrollment: { findUnique: async () => ({ id: 'existing' }) } };
   await assert.rejects(() => new StudentsService(prisma).enroll('student-1', schoolId, { academicYearId: 'year-1', classId: 'class-1', sectionId: 'section-1' }), ConflictException);
 });
 test('bulk attendance rejects duplicate enrollment IDs', async () => {

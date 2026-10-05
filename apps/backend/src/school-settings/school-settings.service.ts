@@ -46,12 +46,7 @@ export class SchoolSettingsService {
 
   async create(actorSchoolId: string | null, data: CreateSchoolSettingDto) {
     this.requireSchool(actorSchoolId);
-    const schoolId = data.schoolId;
-
-    if (!schoolId) {
-      throw new Error('schoolId is required');
-    }
-    if (schoolId !== actorSchoolId) throw new ForbiddenException('You can only create settings for your own school.');
+    const schoolId = actorSchoolId;
 
     const school = await this.prisma.school.findUnique({ where: { id: schoolId } });
     if (!school) {

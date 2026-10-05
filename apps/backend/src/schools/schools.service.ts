@@ -1,9 +1,11 @@
 import {
   BadRequestException,
+  ForbiddenException,
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
 import * as bcrypt from 'bcryptjs';
+import { accountCreationPassword } from '../auth/development-password';
 import { PrismaService } from '../prisma/prisma.service';
 import {
   AddUserProfileOptionDto,
@@ -16,6 +18,30 @@ import {
 @Injectable()
 export class SchoolsService {
   constructor(private readonly prisma: PrismaService) {}
+
+  async findCurrent(schoolId: string | null) {
+    if (!schoolId) throw new ForbiddenException('A school account is required.');
+    const school = await this.prisma.school.findUnique({ where: { id: schoolId } });
+    if (!school) throw new NotFoundException(`School with id ${schoolId} not found`);
+    return school;
+  }
+
+  async updateCurrent(schoolId: string | null, data: UpdateSchoolDto) {
+    if (!schoolId) throw new ForbiddenException('A school account is required.');
+    const allowed = {
+      ...(data.name !== undefined ? { name: data.name.trim() } : {}),
+      ...(data.address !== undefined ? { address: data.address.trim() || null } : {}),
+      ...(data.city !== undefined ? { city: data.city.trim() || null } : {}),
+      ...(data.state !== undefined ? { state: data.state.trim() || null } : {}),
+      ...(data.country !== undefined ? { country: data.country.trim() || null } : {}),
+      ...(data.phone !== undefined ? { phone: data.phone.trim() || null } : {}),
+      ...(data.email !== undefined ? { email: data.email.trim().toLowerCase() || null } : {}),
+      ...(data.website !== undefined ? { website: data.website.trim() || null } : {}),
+    };
+    if ('name' in allowed && !allowed.name) throw new BadRequestException('School name is required.');
+    await this.findOne(schoolId);
+    return this.prisma.school.update({ where: { id: schoolId }, data: allowed });
+  }
 
   findAll() {
     return this.prisma.school.findMany({
@@ -77,6 +103,7 @@ export class SchoolsService {
         slug,
         address: data.address,
         city: data.city,
+        state: data.state,
         country: data.country,
         phone: data.phone,
         email: data.email,
@@ -162,7 +189,7 @@ export class SchoolsService {
   }
 
   private generateTemporaryPassword() {
-    return `DAVI-${Math.random().toString(36).slice(2, 10).toUpperCase()}`;
+    return accountCreationPassword();
   }
 
   async update(id: string, data: UpdateSchoolDto) {
@@ -184,11 +211,11 @@ export class SchoolsService {
     await this.findOne(schoolId);
 
     return this.prisma.student.findMany({
-      where: { schoolId },
+      where: { enrollments: { some: { schoolId } } },
       include: {
         user: true,
-        school: true,
-        studentParents: { include: { parent: true } },
+        enrollments: { where: { schoolId }, include: { academicYear: true, schoolClass: true, section: true } },
+        studentParents: { where: { status: 'ACTIVE' }, include: { parent: { include: { user: true } } } },
       },
       orderBy: { createdAt: 'asc' },
     });
@@ -210,12 +237,11 @@ export class SchoolsService {
   async findSchoolParents(schoolId: string) {
     await this.findOne(schoolId);
 
-    return this.prisma.parent.findMany({
+    return this.prisma.parentSchoolMembership.findMany({
       where: { schoolId },
       include: {
-        user: true,
         school: true,
-        studentParents: { include: { student: true } },
+        parent: { include: { user: true, studentParents: { where: { student: { enrollments: { some: { schoolId } } } }, include: { student: true } } } },
       },
       orderBy: { createdAt: 'asc' },
     });

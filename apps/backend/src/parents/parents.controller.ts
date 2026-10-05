@@ -70,6 +70,11 @@ export class ParentsController {
 
   @Get('me/students')
   myStudents(@Req() req: any) {
-    return this.parentsService.findMyStudents(req.user.id, req.user.schoolId);
+    return this.parentsService.findMyStudents(req.user.id);
+  }
+
+  @Get('me/enrollments/:enrollmentId/dashboard')
+  enrollmentDashboard(@Req() req: any, @Param('enrollmentId') enrollmentId: string) {
+    return this.parentsService.enrollmentDashboard(req.user.id, enrollmentId);
   }
 }

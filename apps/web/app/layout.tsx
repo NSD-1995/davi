@@ -1,6 +1,7 @@
 import type { Metadata } from 'next';
 import type { ReactNode } from 'react';
 import './globals.css';
+import './dashboard.css';
 import { AppProviders } from './providers';
 
 export const metadata: Metadata = {

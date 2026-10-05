@@ -202,7 +202,7 @@ export class SchoolClassesService {
     this.requireSchoolId(schoolId);
     await this.assertClassScope(schoolId, academicYearId, classId);
     const mappings = await this.prisma.classSubject.findMany({
-      where: { schoolId, academicYearId, classId },
+      where: { schoolId, academicYearId, classId, isActive: true },
       include: { subject: true },
       orderBy: { subject: { name: 'asc' } },
     });
@@ -214,7 +214,7 @@ export class SchoolClassesService {
     await this.assertClassScope(schoolId, academicYearId, classId);
     const [subjects, assigned] = await Promise.all([
       this.prisma.subject.findMany({ where: { schoolId, status: 'ACTIVE' }, orderBy: { name: 'asc' } }),
-      this.prisma.classSubject.findMany({ where: { schoolId, academicYearId, classId }, select: { subjectId: true } }),
+      this.prisma.classSubject.findMany({ where: { schoolId, academicYearId, classId, isActive: true }, select: { subjectId: true } }),
     ]);
     const assignedIds = new Set(assigned.map((item) => item.subjectId));
     return subjects.map((subject) => ({ ...subject, isAssigned: assignedIds.has(subject.id) }));
@@ -225,21 +225,30 @@ export class SchoolClassesService {
     await this.assertClassScope(schoolId, academicYearId, classId);
     const subjectIds = this.validateSubjectIds(data.subjectIds);
     await this.validateActiveSubjects(schoolId, subjectIds);
-    const existing = await this.prisma.classSubject.findMany({ where: { schoolId, academicYearId, classId }, select: { subjectId: true } });
-    const current = new Set(existing.map((item) => item.subjectId));
+    const existing = await this.prisma.classSubject.findMany({ where: { schoolId, academicYearId, classId }, select: { id: true, subjectId: true, isActive: true } });
+    const current = new Set(existing.filter((item) => item.isActive).map((item) => item.subjectId));
     const desired = new Set(subjectIds);
     const removed = [...current].filter((id) => !desired.has(id));
     const added = subjectIds.filter((id) => !current.has(id));
-    if (removed.length) await this.assertSubjectsUnused(schoolId, academicYearId, classId, removed);
     await this.prisma.$transaction(async (tx) => {
-      if (removed.length) await tx.classSubject.deleteMany({ where: { schoolId, academicYearId, classId, subjectId: { in: removed } } });
-      if (added.length) await tx.classSubject.createMany({ data: added.map((subjectId) => ({ schoolId, academicYearId, classId, subjectId })) });
+      if (removed.length) {
+        const endedAt = new Date();
+        await tx.classSubject.updateMany({ where: { schoolId, academicYearId, classId, subjectId: { in: removed }, isActive: true }, data: { isActive: false, effectiveTo: endedAt, configVersion: { increment: 1 } } });
+        await tx.subjectTimetableRequirement.deleteMany({ where: { schoolId, academicYearId, classId, subjectId: { in: removed } } });
+        await tx.teacherAcademicAssignment.updateMany({ where: { schoolId, academicYearId, classId, subjectId: { in: removed }, isActive: true }, data: { isActive: false, endDate: endedAt } });
+        await tx.timetableEntry.updateMany({ where: { schoolId, academicYearId, classId, subjectId: { in: removed }, timetablePlan: { status: 'DRAFT' } }, data: { isAffected: true, conflictCode: 'SUBJECT_UNASSIGNED' } });
+      }
+      for (const subjectId of added) {
+        const old = existing.find((item) => item.subjectId === subjectId);
+        if (old) await tx.classSubject.update({ where: { id: old.id }, data: { isActive: true, effectiveFrom: new Date(), effectiveTo: null, configVersion: { increment: 1 } } });
+        else await tx.classSubject.create({ data: { schoolId, academicYearId, classId, subjectId } });
+      }
     });
     return this.findSubjects(schoolId, academicYearId, classId);
   }
 
   async validateSubjectAssignedToClass(schoolId: string, academicYearId: string, classId: string, subjectId: string) {
-    const assignment = await this.prisma.classSubject.findFirst({ where: { schoolId, academicYearId, classId, subjectId } });
+    const assignment = await this.prisma.classSubject.findFirst({ where: { schoolId, academicYearId, classId, subjectId, isActive: true } });
     if (!assignment) throw new BadRequestException('Subject is not assigned to the selected class for this academic year.');
     return assignment;
   }

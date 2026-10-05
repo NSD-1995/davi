@@ -1,6 +1,6 @@
 import { BadRequestException, ConflictException, ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
 import * as bcrypt from 'bcryptjs';
-import { randomBytes } from 'crypto';
+import { accountCreationPassword } from '../auth/development-password';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateStaffDto, UpdateStaffDto } from './staff.dto';
 
@@ -14,7 +14,7 @@ export class StaffService {
     const role = await this.prisma.role.findFirst({ where: { id: data.roleId, schoolId, isActive: true } }); if (!role) throw new NotFoundException('Active role not found for this school.');
     if (await this.prisma.user.findFirst({ where: { OR: [{ username: mobile }, ...(data.email ? [{ email: data.email.trim().toLowerCase() }] : [])] } })) throw new ConflictException('A user with this mobile number or email already exists.');
     if (await this.prisma.staff.findUnique({ where: { schoolId_employeeId: { schoolId, employeeId } } })) throw new ConflictException('Employee ID already exists within this school.');
-    const temporaryPassword = `DAVI-${randomBytes(6).toString('base64url')}`; const passwordHash = await bcrypt.hash(temporaryPassword, 10); const email = data.email?.trim().toLowerCase() || `${mobile}@login.davi.local`;
+    const temporaryPassword = accountCreationPassword(); const passwordHash = await bcrypt.hash(temporaryPassword, 10); const email = data.email?.trim().toLowerCase() || `${mobile}@login.davi.local`;
     const staff = await this.prisma.$transaction(async (tx) => {
       const user = await tx.user.create({ data: { schoolId, username: mobile, email, passwordHash, firstName, lastName: data.lastName?.trim() || '', phone: mobile, mustChangePassword: true } });
       const created = await tx.staff.create({ data: { schoolId, userId: user.id, employeeId, joiningDate: data.joiningDate ? new Date(data.joiningDate) : null } });
