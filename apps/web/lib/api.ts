@@ -13,7 +13,7 @@ async function request<T>(path: string, options: RequestInit = {}, token?: strin
 }
 const json = (value: unknown) => JSON.stringify(value);
 export const authApi = {
-  login: (identifier: string, password: string) => request<{ token: string; requiresPasswordChange: boolean; user: User }>('/auth/login', { method: 'POST', body: json({ username: identifier, password }) }),
+  login: (identifier: string, password: string, schoolSlug?: string) => request<{ token: string; requiresPasswordChange: boolean; user: User }>('/auth/login', { method: 'POST', body: json({ username: identifier, password, schoolSlug }) }),
   me: (token: string) => request<{ user: User; roles: Array<{ id: string; name: string; code: string }>; permissions: string[] }>('/auth/me', {}, token),
   changePassword: (token: string, currentPassword: string, newPassword: string) => request<{ message: string; user: User }>('/auth/change-password', { method: 'POST', body: json({ currentPassword, newPassword }) }, token),
 };
@@ -24,8 +24,8 @@ export const schoolSettingsApi = {
   update: (t: string, id: string, data: Record<string, unknown>) => request<Record<string, unknown>>(`/school-settings/${id}`, { method: 'PATCH', body: json(data) }, t),
 };
 export const timetableApi = { list: (t: string, yearId: string, classId: string, sectionId: string) => request<Record<string, unknown>[]>(`/timetable/entries?academicYearId=${yearId}&classId=${classId}&sectionId=${sectionId}`, {}, t) };
-export const periodTemplateApi={list:(t:string,y:string)=>request<any[]>(`/period-templates?academicYearId=${y}`,{},t),get:(t:string,id:string)=>request<any>(`/period-templates/${id}`,{},t),preview:(t:string,d:any)=>request<any[]>('/period-templates/preview',{method:'POST',body:json(d)},t),create:(t:string,d:any)=>request<any>('/period-templates',{method:'POST',body:json(d)},t),update:(t:string,id:string,d:any)=>request<any>(`/period-templates/${id}`,{method:'PATCH',body:json(d)},t),status:(t:string,id:string,status:string)=>request(`/period-templates/${id}/status`,{method:'POST',body:json({status})},t),version:(t:string,id:string,effectiveFrom:string)=>request(`/period-templates/${id}/version`,{method:'POST',body:json({effectiveFrom})},t),assign:(t:string,id:string,d:any)=>request(`/period-templates/${id}/assignments`,{method:'POST',body:json(d)},t),unassign:(t:string,id:string,a:string)=>request(`/period-templates/${id}/assignments/${a}`,{method:'DELETE'},t),affected:(t:string,id:string)=>request<any>(`/period-templates/${id}/affected-timetables`,{},t),resolve:(t:string,y:string,c:string,s:string,date:string)=>request<any>(`/period-templates/resolve?academicYearId=${y}&classId=${c}&sectionId=${s}&date=${date}`,{},t)};
-export const timetablePlanningApi={requirements:(t:string,y:string,c:string)=>request<any>(`/timetable-planning/requirements?academicYearId=${y}&classId=${c}`,{},t),saveRequirements:(t:string,d:any)=>request('/timetable-planning/requirements',{method:'PUT',body:json(d)},t),generate:(t:string,d:any)=>request<any>('/timetable-planning/generate',{method:'POST',body:json(d)},t),plans:(t:string,y:string,c:string,s:string)=>request<any[]>(`/timetable-planning/plans?academicYearId=${y}&classId=${c}&sectionId=${s}`,{},t),publish:(t:string,id:string)=>request(`/timetable-planning/plans/${id}/publish`,{method:'POST'},t)};
+export const periodTemplateApi={remove:(t:string,id:string)=>request(`/period-templates/${id}`,{method:'DELETE'},t),list:(t:string,y:string)=>request<any[]>(`/period-templates?academicYearId=${y}`,{},t),get:(t:string,id:string)=>request<any>(`/period-templates/${id}`,{},t),preview:(t:string,d:any)=>request<any[]>('/period-templates/preview',{method:'POST',body:json(d)},t),create:(t:string,d:any)=>request<any>('/period-templates',{method:'POST',body:json(d)},t),update:(t:string,id:string,d:any)=>request<any>(`/period-templates/${id}`,{method:'PATCH',body:json(d)},t),status:(t:string,id:string,status:string)=>request(`/period-templates/${id}/status`,{method:'POST',body:json({status})},t),version:(t:string,id:string,effectiveFrom:string)=>request(`/period-templates/${id}/version`,{method:'POST',body:json({effectiveFrom})},t),assign:(t:string,id:string,d:any)=>request(`/period-templates/${id}/assignments`,{method:'POST',body:json(d)},t),unassign:(t:string,id:string,a:string)=>request(`/period-templates/${id}/assignments/${a}`,{method:'DELETE'},t),affected:(t:string,id:string)=>request<any>(`/period-templates/${id}/affected-timetables`,{},t),resolve:(t:string,y:string,c:string,s:string,date:string)=>request<any>(`/period-templates/resolve?academicYearId=${y}&classId=${c}&sectionId=${s}&date=${date}`,{},t)};
+export const timetablePlanningApi={allPlans:(t:string,y:string)=>request<any[]>(`/timetable-planning/plans?academicYearId=${y}`,{},t),remove:(t:string,id:string)=>request(`/timetable-planning/plans/${id}`,{method:'DELETE'},t),requirements:(t:string,y:string,c:string)=>request<any>(`/timetable-planning/requirements?academicYearId=${y}&classId=${c}`,{},t),saveRequirements:(t:string,d:any)=>request('/timetable-planning/requirements',{method:'PUT',body:json(d)},t),generate:(t:string,d:any)=>request<any>('/timetable-planning/generate',{method:'POST',body:json(d)},t),plans:(t:string,y:string,c:string,s:string)=>request<any[]>(`/timetable-planning/plans?academicYearId=${y}&classId=${c}&sectionId=${s}`,{},t),publish:(t:string,id:string)=>request(`/timetable-planning/plans/${id}/publish`,{method:'POST'},t)};
 export const attendanceApi = {
   list: (t:string,classId:string,sectionId:string,from:string,to:string) => request<Array<{id:string;enrollmentId:string;date:string;status:string;remarks?:string|null}>>(`/attendance/students?classId=${classId}&sectionId=${sectionId}&from=${from}&to=${to}`,{},t),
   mark: (t:string,date:string,records:Array<{enrollmentId:string;status:string;remarks?:string}>) => request('/attendance/students',{method:'POST',body:json({date,records})},t),
@@ -49,6 +49,7 @@ export const academicYearApi = {
   removeSubject: (t: string, id: string, subjectId: string) => request(`/academic-years/${id}/subjects/${subjectId}`, { method: 'DELETE' }, t),
 };
 export const classApi = {
+  remove: (t:string,id:string) => request(`/classes/${id}`, {method:'DELETE'}, t),
   list: (t: string) => request<SchoolClass[]>('/classes', {}, t),
   create: (t: string, data: Record<string, unknown>) => request<SchoolClass>('/classes', { method: 'POST', body: json(data) }, t),
   update: (t: string, id: string, data: Record<string, unknown>) => request<SchoolClass>(`/classes/${id}`, { method: 'PATCH', body: json(data) }, t),
@@ -58,6 +59,8 @@ export const classApi = {
   replaceSubjects: (t: string, yearId: string, classId: string, subjectIds: string[]) => request<{ academicYearId: string; classId: string; subjects: Subject[] }>(`/academic-years/${yearId}/classes/${classId}/subjects`, { method: 'PUT', body: json({ subjectIds }) }, t),
 };
 export const classWorkspaceApi = {
+ timetableSetup:(t:string,y:string,c:string,s:string)=>request<any>(`/academic-years/${y}/classes/${c}/sections/${s}/timetable-setup`,{},t),
+ saveTimetableSetup:(t:string,y:string,c:string,s:string,d:any)=>request<any>(`/academic-years/${y}/classes/${c}/sections/${s}/timetable-setup`,{method:'PUT',body:json(d)},t),
   list: (t: string, yearId: string) => request<ClassWorkspace[]>(`/academic-years/${yearId}/class-workspaces`, {}, t),
   dashboard: (t: string, yearId: string, classId: string, sectionId: string) => request<SectionDashboard>(`/academic-years/${yearId}/classes/${classId}/sections/${sectionId}/dashboard`, { cache: 'no-store' }, t),
   students: (t: string, yearId: string, classId: string, sectionId: string) => request<SectionDashboard['recentStudents']>(`/academic-years/${yearId}/classes/${classId}/sections/${sectionId}/students`, {}, t),
@@ -85,6 +88,7 @@ export const classroomManagementApi={
   updateSettings:(t:string,y:string,c:string,s:string,d:any)=>request(`${classroomPath(y,c,s)}/settings`,{method:'PATCH',body:json(d)},t),
 };
 export const sectionApi = {
+  remove: (t:string,id:string) => request(`/sections/${id}`, {method:'DELETE'}, t),
   create: (t: string, data: Record<string, unknown>) => request<Section>('/sections', { method: 'POST', body: json(data) }, t),
   update: (t: string, id: string, data: Record<string, unknown>) => request<Section>(`/sections/${id}`, { method: 'PATCH', body: json(data) }, t),
 };
@@ -115,7 +119,7 @@ export const staffApi = {
   update: (t: string, s: string, id: string, data: Record<string, unknown>) => request<Staff>(`/schools/${s}/staff/${id}`, { method: 'PATCH', body: json(data) }, t),
   deactivate: (t: string, s: string, id: string) => request(`/schools/${s}/staff/${id}`, { method: 'DELETE' }, t),
 };
-export const teacherApi = { list: (t: string) => request<Array<{ id: string; userId: string; teacherCode: string; specialization?: string | null; qualification?: string | null; status: string; user: { firstName: string; lastName: string } }>>('/teachers', {}, t), get: (t:string,id:string)=>request<Record<string,any>>(`/teachers/${id}`,{},t), assignments:(t:string,id:string)=>request<Record<string,any>[]>(`/teachers/${id}/assignments`,{},t), create: (t: string, data: Record<string, unknown>) => request('/teachers', { method: 'POST', body: json(data) }, t), update: (t: string, id: string, data: Record<string, unknown>) => request(`/teachers/${id}`, { method: 'PATCH', body: json(data) }, t), remove: (t: string, id: string) => request(`/teachers/${id}`, { method: 'DELETE' }, t) };
+export const teacherApi = { saveTeachingSetup:(t:string,id:string,d:any)=>request<any>(`/teachers/${id}/teaching-setup`,{method:'PUT',body:json(d)},t), saveEligibility:(t:string,id:string,d:any)=>request<any>(`/teachers/${id}/eligibility`,{method:'PUT',body:json(d)},t), saveCapabilities:(t:string,id:string,subjectIds:string[])=>request<any>(`/teachers/${id}/capabilities`,{method:'PUT',body:json({subjectIds})},t), removeSubjectAssignment:(t:string,id:string,assignmentId:string)=>request(`/teachers/${id}/subject-assignments/${assignmentId}`,{method:'DELETE'},t), classTeacherOptions:(t:string,y:string)=>request<any[]>(`/teachers/class-teacher-options?academicYearId=${y}`,{},t), list: (t: string) => request<Array<{ id: string; userId: string; teacherCode: string; specialization?: string | null; qualification?: string | null; capableSubjectIds?:string[]; timetableEligibility?:any; status: string; user: { firstName: string; lastName: string } }>>('/teachers', {}, t), get: (t:string,id:string)=>request<Record<string,any>>(`/teachers/${id}`,{},t), assignments:(t:string,id:string)=>request<Record<string,any>[]>(`/teachers/${id}/assignments`,{},t), create: (t: string, data: Record<string, unknown>) => request('/teachers', { method: 'POST', body: json(data) }, t), update: (t: string, id: string, data: Record<string, unknown>) => request(`/teachers/${id}`, { method: 'PATCH', body: json(data) }, t), remove: (t: string, id: string) => request(`/teachers/${id}`, { method: 'DELETE' }, t) };
 export const parentApi = {
   list: (t: string) => request<Parent[]>('/parents', {}, t),
   get: (t: string, id: string) => request<Parent>(`/parents/${id}`, {}, t),
@@ -129,4 +133,37 @@ export const studentApi = {
   get: (t: string, id: string) => request<Student & { studentParents: Array<{ relationshipType:string;isPrimary:boolean;canPickup:boolean;canViewAcademics:boolean;canPayFees:boolean;parent:{id:string;user:{firstName:string;lastName:string;phone?:string|null;email?:string|null}}}> }>(`/students/${id}`, {}, t),
   update: (t: string, id: string, data: Record<string, unknown>) => request<Student>(`/students/${id}`, { method: 'PATCH', body: json(data) }, t),
   remove: (t: string, id: string) => request(`/students/${id}`, { method: 'DELETE' }, t),
+};
+
+export const timetableRulesApi = {
+ classifyGroupSubjects:(t:string,d:any)=>request<any>('/timetable-planning/group-subjects',{method:'PUT',body:json(d)},t),
+ groupWorkspace:(t:string,y:string,g:string)=>request<any>(`/timetable-planning/group-workspace?academicYearId=${y}&groupId=${g}`,{},t),
+ saveGroupWorkspace:(t:string,d:any)=>request<any>('/timetable-planning/group-workspace',{method:'PUT',body:json(d)},t),
+ simple:(t:string,y:string)=>request<any>(`/timetable-planning/simple-setup?academicYearId=${y}`,{},t),
+ saveSimple:(t:string,d:any)=>request<any>('/timetable-planning/simple-setup',{method:'PUT',body:json(d)},t),
+ settings:(t:string)=>request<any>('/timetable-planning/settings',{},t),
+ saveSettings:(t:string,d:any)=>request<any>('/timetable-planning/settings',{method:'PUT',body:json(d)},t),
+ teacher:(t:string,y:string,id:string)=>request<any>(`/timetable-planning/teachers/${id}/config?academicYearId=${y}`,{},t),
+ saveTeacher:(t:string,id:string,d:any)=>request<any>(`/timetable-planning/teachers/${id}/config`,{method:'PUT',body:json(d)},t),
+ subjects:(t:string,y:string,c:string)=>request<any[]>(`/timetable-planning/subjects/config?academicYearId=${y}&classId=${c}`,{},t),
+ saveSubject:(t:string,id:string,d:any)=>request<any>(`/timetable-planning/subjects/${id}/config`,{method:'PUT',body:json(d)},t),
+ staffing:(t:string,d:any)=>request<any>('/timetable-planning/staffing',{method:'POST',body:json(d)},t),
+ generate:(t:string,d:any)=>request<any>('/timetable-planning/generate-batch',{method:'POST',body:json(d)},t),
+ validate:(t:string,id:string)=>request<any>(`/timetable-planning/plans/${id}/validate`,{method:'POST'},t),
+};
+
+export const teacherCoverApi={
+ alerts:(t:string)=>request<any[]>('/teacher-cover/alerts',{},t),
+ readAlert:(t:string,id:string)=>request<any>(`/teacher-cover/alerts/${id}/read`,{method:'PATCH'},t),
+ ownAttendance:(t:string)=>request<any>('/attendance/staff/check-in',{},t),
+ schedule:(t:string,date:string)=>request<any>(`/teacher-cover/schedule?date=${date}`,{},t),
+ list:(t:string,date:string)=>request<any>(`/teacher-cover?date=${date}`,{},t),
+ policy:(t:string)=>request<any>('/teacher-cover/policy',{},t),
+ savePolicy:(t:string,d:any)=>request<any>('/teacher-cover/policy',{method:'PUT',body:json(d)},t),
+ refresh:(t:string,date:string)=>request<any>('/teacher-cover/refresh',{method:'POST',body:json({date})},t),
+ assign:(t:string,id:string,teacherId:string,date:string)=>request<any>(`/teacher-cover/${id}/assign`,{method:'PUT',body:json({teacherId,date})},t),
+ mark:(t:string,d:any)=>request<any>('/attendance/staff',{method:'POST',body:json(d)},t),
+ checkIn:(t:string)=>request<any>('/attendance/staff/check-in',{method:'POST'},t),
+ notifications:(t:string)=>request<any[]>('/notifications',{},t),
+ readNotification:(t:string,id:string)=>request<any>(`/notifications/${id}/read`,{method:'PATCH'},t),
 };

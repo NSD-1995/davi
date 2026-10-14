@@ -3,6 +3,8 @@ import { Body, Controller, Get, Post, Query, Req, UseGuards } from '@nestjs/comm
 export class AttendanceController { constructor(private readonly service: AttendanceService) {}
   @Post('students') @RequirePermissions('ATTENDANCE_MARK') markStudents(@Req() req: any, @Body() dto: MarkStudentAttendanceDto) { return this.service.markStudents(req.user.schoolId, req.user.id, dto); }
   @Get('students') @RequirePermissions('ATTENDANCE_VIEW') students(@Req() req: any, @Query('date') date?: string, @Query('classId') classId?: string, @Query('sectionId') sectionId?: string, @Query('from') from?: string, @Query('to') to?: string) { return this.service.listStudents(req.user.schoolId, date, classId, sectionId, from, to); }
-  @Post('staff') @RequirePermissions('ATTENDANCE_MARK') markStaff(@Req() req: any, @Body() dto: MarkStaffAttendanceDto) { return this.service.markStaff(req.user.schoolId, req.user.id, dto); }
+  @Get('staff/check-in') own(@Req()req:any){return this.service.ownAttendance(req.user.schoolId,req.user.id);}
+  @Post('staff/check-in') checkIn(@Req()req:any){return this.service.selfCheckIn(req.user.schoolId,req.user.id);}
+  @Post('staff') @RequirePermissions('ATTENDANCE_MARK','STAFF_UPDATE') markStaff(@Req() req: any, @Body() dto: MarkStaffAttendanceDto) { return this.service.markStaff(req.user.schoolId, req.user.id, dto); }
   @Get('staff') @RequirePermissions('ATTENDANCE_VIEW') staff(@Req() req: any, @Query('date') date?: string) { return this.service.listStaff(req.user.schoolId, date); }
 }

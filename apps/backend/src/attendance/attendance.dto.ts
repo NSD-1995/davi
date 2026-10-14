@@ -1,3 +1,3 @@
 export class StudentAttendanceItemDto { enrollmentId!: string; status!: 'PRESENT' | 'ABSENT' | 'LATE' | 'ON_DUTY' | 'EXCUSED'; remarks?: string; }
 export class MarkStudentAttendanceDto { date!: string; records!: StudentAttendanceItemDto[]; }
-export class MarkStaffAttendanceDto { staffId!: string; date!: string; status!: 'PRESENT' | 'ABSENT' | 'LATE' | 'ON_LEAVE'; checkIn?: string; checkOut?: string; remarks?: string; }
+export class MarkStaffAttendanceDto { staffId!: string; date!: string; status!: 'PRESENT' | 'ABSENT' | 'LATE' | 'ON_LEAVE' | 'PERMISSION'; expectedArrivalTime?:string; checkIn?: string; checkOut?: string; remarks?: string; }

@@ -1,3 +1,5 @@
+import {academicGroup,validGroups,subjectInGroup} from '../academic-groups';
+import { Prisma } from '@prisma/client';
 import { BadRequestException, ConflictException, ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateClassesBulkDto, CreateSchoolClassDto, SchoolClassStatus, UpdateSchoolClassDto } from './classes.dto';
@@ -44,6 +46,7 @@ export class SchoolClassesService {
 
   async create(schoolId: string | null, data: CreateSchoolClassDto) {
     this.requireSchoolId(schoolId);
+    if(data.academicGroup!==undefined&&!validGroups([data.academicGroup]))throw new BadRequestException('Choose a valid academic group.');
     this.validateSectionCount(data.numberOfSections);
     this.validateStatus(data.status);
     const subjectIds = this.validateSubjectIds(data.subjectIds ?? []);
@@ -59,7 +62,7 @@ export class SchoolClassesService {
     if (!academicYear) {
       throw new NotFoundException('Academic year not found for your school.');
     }
-    await this.validateActiveSubjects(schoolId, subjectIds);
+    await this.validateActiveSubjects(schoolId, subjectIds, academicGroup(data));
 
     return this.prisma.$transaction(async (tx) => {
       const schoolClass = await tx.schoolClass.create({
@@ -67,6 +70,7 @@ export class SchoolClassesService {
           schoolId,
           academicYearId: data.academicYearId,
           name: data.name,
+          academicGroup:academicGroup(data),
           code: data.code ?? null,
           capacity: data.capacity ?? null,
           status: data.status ?? 'ACTIVE',
@@ -113,7 +117,7 @@ export class SchoolClassesService {
 
     const classNames = this.getStandardClassNames(data);
     if (classNames.length === 0) {
-      throw new BadRequestException('Select at least one class group: montessori, primary, secondary, or seniorSecondary.');
+      throw new BadRequestException('Select at least one class group: montessori, prePrimary, primary, middle, secondary, or seniorSecondary.');
     }
     const existingClasses = await this.prisma.schoolClass.findMany({
       where: {
@@ -138,6 +142,7 @@ export class SchoolClassesService {
             schoolId,
             academicYearId: data.academicYearId,
             name: className,
+            academicGroup:academicGroup({name:className}),
             status: 'ACTIVE',
           },
         });
@@ -171,6 +176,7 @@ export class SchoolClassesService {
 
   async update(id: string, schoolId: string | null, data: UpdateSchoolClassDto) {
     await this.findOne(id, schoolId);
+    if(data.academicGroup!==undefined&&!validGroups([data.academicGroup]))throw new BadRequestException('Choose a valid academic group.');
     this.validateStatus(data.status);
     if (data.academicYearId) {
       const academicYear = await this.prisma.academicYear.findFirst({
@@ -183,6 +189,7 @@ export class SchoolClassesService {
       where: { id },
       data: {
         ...(data.academicYearId !== undefined ? { academicYearId: data.academicYearId } : {}),
+        ...(data.academicGroup !== undefined ? {academicGroup:data.academicGroup} : {}),
         ...(data.name !== undefined ? { name: data.name } : {}),
         ...(data.code !== undefined ? { code: data.code } : {}),
         ...(data.capacity !== undefined ? { capacity: data.capacity } : {}),
@@ -195,36 +202,40 @@ export class SchoolClassesService {
   async remove(id: string, schoolId: string | null) {
     await this.findOne(id, schoolId);
 
-    return this.prisma.schoolClass.delete({ where: { id } });
+    try { return await this.prisma.schoolClass.delete({ where: { id } }); }
+    catch(error) {
+      if((error instanceof Prisma.PrismaClientKnownRequestError && error.code==='P2003') || (error instanceof Prisma.PrismaClientUnknownRequestError && /violates RESTRICT setting of foreign key constraint|violates foreign key constraint/.test(error.message))) throw new ConflictException('Class is linked to students, subject or teacher assignments, timetables, or other academic records. Remove those links first or set its status to INACTIVE.');
+      throw error;
+    }
   }
 
   async findSubjects(schoolId: string | null, academicYearId: string, classId: string) {
     this.requireSchoolId(schoolId);
-    await this.assertClassScope(schoolId, academicYearId, classId);
+    const schoolClass=await this.assertClassScope(schoolId, academicYearId, classId);
     const mappings = await this.prisma.classSubject.findMany({
       where: { schoolId, academicYearId, classId, isActive: true },
       include: { subject: true },
       orderBy: { subject: { name: 'asc' } },
     });
-    return { academicYearId, classId, subjects: mappings.map((mapping) => mapping.subject) };
+    return { academicYearId, classId, subjects: mappings.map((mapping) => mapping.subject).filter(subject=>subjectInGroup(subject,academicGroup(schoolClass))) };
   }
 
   async availableSubjects(schoolId: string | null, academicYearId: string, classId: string) {
     this.requireSchoolId(schoolId);
-    await this.assertClassScope(schoolId, academicYearId, classId);
+    const schoolClass=await this.assertClassScope(schoolId, academicYearId, classId);
     const [subjects, assigned] = await Promise.all([
       this.prisma.subject.findMany({ where: { schoolId, status: 'ACTIVE' }, orderBy: { name: 'asc' } }),
       this.prisma.classSubject.findMany({ where: { schoolId, academicYearId, classId, isActive: true }, select: { subjectId: true } }),
     ]);
     const assignedIds = new Set(assigned.map((item) => item.subjectId));
-    return subjects.map((subject) => ({ ...subject, isAssigned: assignedIds.has(subject.id) }));
+    return subjects.filter(subject=>subjectInGroup(subject,academicGroup(schoolClass))).map((subject) => ({ ...subject, isAssigned: assignedIds.has(subject.id) }));
   }
 
   async replaceSubjects(schoolId: string | null, academicYearId: string, classId: string, data: { subjectIds: string[] }) {
     this.requireSchoolId(schoolId);
-    await this.assertClassScope(schoolId, academicYearId, classId);
+    const schoolClass=await this.assertClassScope(schoolId, academicYearId, classId);
     const subjectIds = this.validateSubjectIds(data.subjectIds);
-    await this.validateActiveSubjects(schoolId, subjectIds);
+    await this.validateActiveSubjects(schoolId, subjectIds,academicGroup(schoolClass));
     const existing = await this.prisma.classSubject.findMany({ where: { schoolId, academicYearId, classId }, select: { id: true, subjectId: true, isActive: true } });
     const current = new Set(existing.filter((item) => item.isActive).map((item) => item.subjectId));
     const desired = new Set(subjectIds);
@@ -260,6 +271,7 @@ export class SchoolClassesService {
     ]);
     if (!year) throw new NotFoundException('Academic year not found for your school.');
     if (!schoolClass) throw new BadRequestException('Class must belong to the selected academic year.');
+    return schoolClass;
   }
 
   private validateSubjectIds(value: unknown): string[] {
@@ -269,10 +281,11 @@ export class SchoolClassesService {
     return value;
   }
 
-  private async validateActiveSubjects(schoolId: string, subjectIds: string[]) {
+  private async validateActiveSubjects(schoolId: string, subjectIds: string[], group:string|null=null) {
     if (!subjectIds.length) return;
     const subjects = await this.prisma.subject.findMany({ where: { id: { in: subjectIds }, schoolId } });
     if (subjects.length !== subjectIds.length) throw new BadRequestException('Every subject must belong to your school.');
+    if(subjects.some(subject=>!subjectInGroup(subject,group)))throw new BadRequestException('Subject is outside this class academic group.');
     const inactive = subjects.filter((subject) => subject.status !== 'ACTIVE');
     if (inactive.length) throw new BadRequestException(`Only active subjects can be assigned: ${inactive.map((subject) => subject.name).join(', ')}.`);
   }
@@ -316,10 +329,12 @@ export class SchoolClassesService {
 
   private getStandardClassNames(data: CreateClassesBulkDto) {
     const montessori = data.montessori ? ['Play School', 'Nursery', 'LKG', 'UKG'] : [];
-    const primary = data.primary ? this.getStandardRange(1, 5) : [];
-    const secondary = data.secondary ? this.getStandardRange(6, 10) : [];
+    const prePrimary = data.prePrimary ? this.getStandardRange(1, 2) : [];
+    const primary = data.primary ? this.getStandardRange(3, 5) : [];
+    const middle = data.middle ? this.getStandardRange(6, 8) : [];
+    const secondary = data.secondary ? this.getStandardRange(9, 10) : [];
     const seniorSecondary = data.seniorSecondary ? this.getStandardRange(11, 12) : [];
-    return [...montessori, ...primary, ...secondary, ...seniorSecondary];
+    return [...montessori, ...prePrimary, ...primary, ...middle, ...secondary, ...seniorSecondary];
   }
 
   private getStandardRange(start: number, end: number) {

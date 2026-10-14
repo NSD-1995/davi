@@ -12,7 +12,7 @@ export class StaffService {
   async create(schoolId: string, actorSchoolId: string | null, data: CreateStaffDto) {
     this.school(schoolId, actorSchoolId); const mobile = this.mobile(data.mobile); const firstName = this.required(data.firstName, 'firstName'); const employeeId = this.required(data.employeeId, 'employeeId');
     const role = await this.prisma.role.findFirst({ where: { id: data.roleId, schoolId, isActive: true } }); if (!role) throw new NotFoundException('Active role not found for this school.');
-    if (await this.prisma.user.findFirst({ where: { OR: [{ username: mobile }, ...(data.email ? [{ email: data.email.trim().toLowerCase() }] : [])] } })) throw new ConflictException('A user with this mobile number or email already exists.');
+    if (await this.prisma.user.findFirst({ where: { schoolId, OR: [{ username: mobile }, ...(data.email ? [{ email: data.email.trim().toLowerCase() }] : [])] } })) throw new ConflictException('A user with this mobile number or email already exists in this school.');
     if (await this.prisma.staff.findUnique({ where: { schoolId_employeeId: { schoolId, employeeId } } })) throw new ConflictException('Employee ID already exists within this school.');
     const temporaryPassword = accountCreationPassword(); const passwordHash = await bcrypt.hash(temporaryPassword, 10); const email = data.email?.trim().toLowerCase() || `${mobile}@login.davi.local`;
     const staff = await this.prisma.$transaction(async (tx) => {
@@ -33,11 +33,12 @@ export class StaffService {
       await tx.user.update({ where: { id: staff.userId }, data: { ...(data.firstName !== undefined ? { firstName: this.required(data.firstName, 'firstName') } : {}), ...(data.lastName !== undefined ? { lastName: data.lastName } : {}), ...(data.email !== undefined ? { email: data.email.toLowerCase() } : {}), ...(data.status !== undefined ? { status: data.status } : {}) } });
       await tx.staff.update({ where: { id }, data: { ...(data.employeeId !== undefined ? { employeeId: this.required(data.employeeId, 'employeeId') } : {}), ...(data.joiningDate !== undefined ? { joiningDate: new Date(data.joiningDate) } : {}), ...(data.status !== undefined ? { status: data.status } : {}) } });
       if (role) { await tx.userRole.deleteMany({ where: { userId: staff.userId, schoolId } }); await tx.userRole.create({ data: { userId: staff.userId, roleId: role.id, schoolId } }); }
+      if (data.status !== undefined) await tx.teacher.updateMany({ where: { userId: staff.userId, schoolId }, data: { status: data.status === 'ACTIVE' ? 'ACTIVE' : 'INACTIVE' } });
       return tx.staff.findUniqueOrThrow({ where: { id }, include: { user: { include: { roles: { include: { role: true } } } } } });
     });
     return this.safe(updated);
   }
-  async deactivate(schoolId: string, id: string, actorSchoolId: string | null) { const staff = await this.findOne(schoolId, id, actorSchoolId); await this.prisma.$transaction([this.prisma.staff.update({ where: { id }, data: { status: 'INACTIVE' } }), this.prisma.user.update({ where: { id: staff.userId }, data: { status: 'INACTIVE' } })]); return { message: 'Staff deactivated successfully.', id }; }
+  async deactivate(schoolId: string, id: string, actorSchoolId: string | null) { const staff = await this.findOne(schoolId, id, actorSchoolId); await this.prisma.$transaction([this.prisma.staff.update({ where: { id }, data: { status: 'INACTIVE' } }), this.prisma.user.update({ where: { id: staff.userId }, data: { status: 'INACTIVE' } }), this.prisma.teacher.updateMany({ where: { userId: staff.userId, schoolId }, data: { status: 'INACTIVE' } })]); return { message: 'Staff deactivated successfully.', id }; }
   private school(schoolId: string, actorSchoolId: string | null) { if (!actorSchoolId || schoolId !== actorSchoolId) throw new ForbiddenException('You can only manage staff for your own school.'); }
   private required(value: string | undefined, field: string) { if (!value?.trim()) throw new BadRequestException(`${field} is required.`); return value.trim(); }
   private mobile(value: string | undefined) { const digits = value?.replace(/\D/g, '') ?? ''; const normalized = digits.startsWith('91') && digits.length === 12 ? digits.slice(2) : digits; if (!/^[6-9]\d{9}$/.test(normalized)) throw new BadRequestException('mobile must be a valid 10-digit Indian mobile number.'); return normalized; }

@@ -2,3 +2,36 @@
 @media(max-width:1000px){.metric-grid{grid-template-columns:repeat(2,1fr)}.split-grid{grid-template-columns:1fr}.class-grid{grid-template-columns:1fr}.auth-page{grid-template-columns:1fr}.auth-visual{display:none}.auth-panel{min-height:100vh}.mobile-brand{display:flex;align-items:center;gap:10px;margin-bottom:40px;color:var(--navy)}}@media(max-width:760px){.sidebar{transform:translateX(-100%);transition:.22s}.sidebar.open{transform:none}.scrim{display:block;position:fixed;inset:0;border:0;background:#0c1d2d77;z-index:25}.main-column{margin-left:0}.menu-button{display:block;margin-right:12px}.topbar{padding:0 14px}.year-selector span,.user-name,.topbar-actions>.icon-button{display:none}.school-title{max-width:145px}.school-title strong{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.content{padding:21px 15px}.page-header{align-items:stretch;flex-direction:column}.page-header>.button,.page-header>.button-row{align-self:stretch}.page-header>.button-row>*{flex:1}.metric-grid,.setup-list,.form-grid.two,.choice-grid,.permission-groups{grid-template-columns:1fr}.span-two{grid-column:auto}.hero-card{align-items:flex-start;flex-wrap:wrap}.hero-card .button{margin-left:0}.table-wrap{margin-right:-15px;border-radius:12px 0 0 12px}.modal{padding:18px}.toast{left:15px;right:15px}.subject-list>div{grid-template-columns:40px 1fr auto}.subject-list>div>.actions{grid-column:2}.profile-banner{padding:20px}.profile-card form{padding:20px}}
 .school-logo:is(img){object-fit:contain}.table-subtitle{display:block;margin-top:3px}.pagination{display:flex;align-items:center;justify-content:space-between;gap:15px;padding:14px 16px;font-size:.78rem;color:var(--muted)}.pagination>div{display:flex;align-items:center;gap:12px}.pagination .button{padding:7px 11px}.detail-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:8px 20px}.detail-grid p{color:var(--ink)}.linked-list{border:1px solid var(--line);border-radius:9px;margin-bottom:20px}.linked-list>div{display:flex;align-items:center;justify-content:space-between;gap:15px;padding:12px;border-bottom:1px solid var(--line)}.linked-list>div:last-child{border-bottom:0}.linked-list small{display:block;margin-top:3px}.form-grid.three{grid-template-columns:2fr 1fr 1fr}.span-three{grid-column:1/-1}.link-form{border-top:1px solid var(--line);padding-top:20px}.checkbox-field{display:flex;align-items:center;gap:8px;font-size:.8rem;font-weight:700;padding-top:25px}.checkbox-field input{width:17px;height:17px;accent-color:var(--teal)}
 @media(max-width:760px){.form-grid.three,.detail-grid{grid-template-columns:1fr}.span-three{grid-column:auto}.pagination{align-items:flex-start;flex-direction:column}.linked-list>div{align-items:flex-start}.checkbox-field{padding-top:0}}
+.print-only { display: none; }
+@media print {
+  @page { size: A4 landscape; margin: 10mm; }
+  body.timetable-print { background: white; color: black; }
+  body.timetable-print .sidebar,
+  body.timetable-print .topbar,
+  body.timetable-print .scrim,
+  body.timetable-print .no-print,
+  body.timetable-print button,
+  body.timetable-print details,
+  body.timetable-print input,
+  body.timetable-print select,
+  body.timetable-print .timetable-sheet .button-row { display: none !important; }
+  body.timetable-print .print-only { display: block; margin-bottom: 5mm; }
+  body.timetable-print .app-shell,
+  body.timetable-print .main-column,
+  body.timetable-print .content { display: block; width: 100%; margin: 0; padding: 0; min-height: 0; }
+  body.timetable-print .timetable-sheet { break-after: page; break-inside: avoid; margin: 0; padding: 0; }
+  body.timetable-print .timetable-sheet:last-child { break-after: auto; }
+  body.timetable-print .card { box-shadow: none; border: 0; margin: 0; padding: 2mm 0; }
+  body.timetable-print .table-wrap { overflow: visible; width: 100%; }
+  body.timetable-print table { width: 100%; min-width: 0 !important; table-layout: fixed; border-collapse: collapse; font-size: 8pt; }
+  body.timetable-print th,
+  body.timetable-print td { padding: 2mm 1mm; border: 1px solid #bbb; white-space: normal; overflow-wrap: anywhere; }
+  body.timetable-print th:first-child { width: 10mm; }
+  body.timetable-print table small { font-size: 7pt; }
+  body.timetable-print h1 { font-size: 16pt; margin: 0; }
+  body.timetable-print h2,
+  body.timetable-print h3 { font-size: 12pt; margin: 2mm 0; }
+  body.timetable-print tr { break-inside: avoid; }
+  body.timetable-print .timetable-sheet > .card-heading span { font-size: 8pt; }
+  body.timetable-print-one .timetable-sheet:not(.timetable-print-target) { display: none !important; }
+}

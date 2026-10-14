@@ -13,8 +13,8 @@ export class AuthService {
   ) {}
 
   async register(dto: RegisterDto) {
-    const existingUser = await this.prisma.user.findUnique({
-      where: { email: dto.email },
+    const existingUser = await this.prisma.user.findFirst({
+      where: { schoolId: dto.schoolId ?? null, email: dto.email },
     });
 
     if (existingUser) {
@@ -131,14 +131,17 @@ export class AuthService {
   async login(dto: LoginDto) {
     const identifier = dto.username?.trim() || dto.email?.trim().toLowerCase();
     if (!identifier) throw new BadRequestException('Email or username is required.');
-    const user = await this.prisma.user.findFirst({
-      where: { OR: [{ email: identifier }, { username: identifier }] },
+    const users = await this.prisma.user.findMany({
+      where: { status: 'ACTIVE', ...(dto.schoolId ? { schoolId: dto.schoolId } : {}), ...(dto.schoolSlug ? { school: { slug: dto.schoolSlug.trim().toLowerCase() } } : {}), OR: [{ email: identifier }, { username: identifier }] },
+      take: 2,
       include: {
         school: true,
         roles: { include: { role: true } },
       },
     });
 
+    if (users.length > 1) throw new BadRequestException('Multiple active accounts use this identifier. Sign in through your school login page or provide schoolId or schoolSlug.');
+    const user = users[0];
     if (!user) {
       throw new UnauthorizedException('Invalid username/email or password');
     }

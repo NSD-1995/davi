@@ -5,12 +5,14 @@ export class CreateSubjectDto {
   schoolId!: string;
   name!: string;
   code!: string;
+  academicGroups?: string[];
   description?: string;
   type?: SubjectType;
   status?: SubjectStatus;
 }
 
 export class UpdateSubjectDto {
+  academicGroups?: string[];
   name?: string;
   code?: string;
   description?: string;

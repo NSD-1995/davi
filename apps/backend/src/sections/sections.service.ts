@@ -1,4 +1,5 @@
-import { BadRequestException, ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
+import { Prisma } from '@prisma/client';
+import { BadRequestException, ConflictException, ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateSectionDto, UpdateSectionDto } from './sections.dto';
 
@@ -92,7 +93,20 @@ export class SectionsService {
   async remove(id: string, schoolId: string | null) {
     await this.findOne(id, schoolId);
 
-    return this.prisma.section.delete({ where: { id } });
+    try { return await this.prisma.$transaction(async tx => {
+      const [students,timetables] = await Promise.all([
+        tx.studentEnrollment.count({where:{sectionId:id,schoolId:schoolId!}}),
+        tx.timetableEntry.count({where:{sectionId:id,schoolId:schoolId!}}),
+      ]);
+      if(students||timetables) throw new ConflictException('Section has '+students+' student enrollment(s) and '+timetables+' timetable entry/entries. Move or remove those records first, or set the section status to INACTIVE.');
+      await tx.teacherAcademicAssignment.deleteMany({where:{sectionId:id,schoolId:schoolId!}});
+      await tx.periodTemplateAssignment.deleteMany({where:{sectionId:id,schoolId:schoolId!}});
+      return tx.section.delete({where:{id}});
+    }); }
+    catch(error) {
+      if((error instanceof Prisma.PrismaClientKnownRequestError && error.code==='P2003') || (error instanceof Prisma.PrismaClientUnknownRequestError && /violates RESTRICT setting of foreign key constraint|violates foreign key constraint/.test(error.message))) throw new ConflictException('Section is linked to students, subject or teacher assignments, timetables, or other academic records. Remove those links first or set its status to INACTIVE.');
+      throw error;
+    }
   }
 
   private requireSchoolId(schoolId: string | null): asserts schoolId is string {

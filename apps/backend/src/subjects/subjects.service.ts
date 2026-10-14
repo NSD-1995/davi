@@ -1,3 +1,4 @@
+import {validGroups} from '../academic-groups';
 import { BadRequestException, ConflictException, ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
@@ -40,12 +41,13 @@ export class SubjectsService {
     const code = this.requiredValue(data.code, 'code').toUpperCase();
     this.validateStatus(data.status);
     this.validateType(data.type);
+    if(data.academicGroups!==undefined&&!validGroups(data.academicGroups))throw new BadRequestException('Choose valid academic groups.');
     const school = await this.prisma.school.findUnique({ where: { id: schoolId } });
     if (!school) throw new NotFoundException(`School with id ${schoolId} not found`);
     await this.ensureUnique(schoolId, name, code);
     try {
       return await this.prisma.subject.create({
-        data: { schoolId, name, code, description: data.description ?? null, type: data.type ?? 'CORE', status: data.status ?? 'ACTIVE' },
+        data: { schoolId, name, code, academicGroups:data.academicGroups??[], description: data.description ?? null, type: data.type ?? 'CORE', status: data.status ?? 'ACTIVE' },
         include: { school: true },
       });
     } catch (error) { this.rethrowUnique(error); }
@@ -55,6 +57,7 @@ export class SubjectsService {
     const subject = await this.findOne(id, schoolId);
     this.validateStatus(data.status);
     this.validateType(data.type);
+    if(data.academicGroups!==undefined&&!validGroups(data.academicGroups))throw new BadRequestException('Choose valid academic groups.');
     const name = data.name === undefined ? subject.name : this.requiredValue(data.name, 'name');
     const code = data.code === undefined ? subject.code : this.requiredValue(data.code, 'code').toUpperCase();
     await this.ensureUnique(subject.schoolId, name, code, id);
@@ -62,6 +65,7 @@ export class SubjectsService {
       return await this.prisma.subject.update({
         where: { id },
         data: {
+          ...(data.academicGroups !== undefined ? {academicGroups:data.academicGroups} : {}),
           ...(data.name !== undefined ? { name } : {}), ...(data.code !== undefined ? { code } : {}),
           ...(data.description !== undefined ? { description: data.description } : {}),
           ...(data.type !== undefined ? { type: data.type } : {}), ...(data.status !== undefined ? { status: data.status } : {}),
@@ -72,10 +76,29 @@ export class SubjectsService {
 
   async remove(id: string, schoolId: string | null) {
     await this.findOne(id, schoolId);
-    const assignments = await this.prisma.academicYearSubject.count({ where: { subjectId: id } });
-    const classAssignments = await this.prisma.classSubject.count({ where: { subjectId: id } });
-    if (assignments > 0 || classAssignments > 0) throw new ConflictException('Subject is assigned to one or more academic years or classes. Remove those assignments or set the subject status to INACTIVE.');
-    return this.prisma.subject.delete({ where: { id } });
+    try {
+      return await this.prisma.$transaction(async tx => {
+        const [years, classes, teachers, timetable, exams] = await Promise.all([
+          tx.academicYearSubject.count({ where: { schoolId: schoolId!, subjectId: id } }),
+          tx.classSubject.count({ where: { schoolId: schoolId!, subjectId: id, isActive: true } }),
+          tx.teacherAcademicAssignment.count({ where: { schoolId: schoolId!, subjectId: id, isActive: true } }),
+          tx.timetableEntry.count({ where: { schoolId: schoolId!, subjectId: id } }),
+          tx.examSubject.count({ where: { subjectId: id } }),
+        ]);
+        if (years || classes || teachers) throw new ConflictException(
+          'Subject still has active assignments: ' + years + ' academic year(s), ' + classes + ' class(es), ' + teachers + ' teacher assignment(s). Remove those assignments or set the subject status to INACTIVE.',
+        );
+        if (timetable || exams) throw new ConflictException('Subject is used in timetable or exam records. Set the subject status to INACTIVE to preserve those records.');
+        await tx.teacherAcademicAssignment.deleteMany({ where: { schoolId: schoolId!, subjectId: id, isActive: false } });
+        await tx.classSubject.deleteMany({ where: { schoolId: schoolId!, subjectId: id, isActive: false } });
+        const capableTeachers=await tx.teacher.findMany({where:{schoolId:schoolId!,capableSubjectIds:{has:id}},select:{id:true,capableSubjectIds:true}});
+        for(const teacher of capableTeachers)await tx.teacher.update({where:{id:teacher.id},data:{capableSubjectIds:teacher.capableSubjectIds.filter(subjectId=>subjectId!==id)}});
+        return tx.subject.delete({ where: { id } });
+      });
+    } catch (error) {
+      if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2003') throw new ConflictException('Subject is still referenced by academic records. Remove its assignments or set the subject status to INACTIVE.');
+      throw error;
+    }
   }
 
   private async ensureUnique(schoolId: string, name: string, code: string, excludedId?: string) {

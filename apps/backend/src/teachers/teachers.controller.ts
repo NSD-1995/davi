@@ -6,6 +6,8 @@ import {
   Param,
   Patch,
   Post,
+  Put,
+  Query,
   Req,
   UseGuards,
 } from '@nestjs/common';
@@ -32,6 +34,10 @@ export class TeachersController {
     return this.teachersService.findAll(req.user.schoolId);
   }
 
+  @Get('class-teacher-options')
+  @RequirePermissions('STAFF_VIEW')
+  options(@Req()req:any,@Query('academicYearId')year:string){return this.teachersService.classTeacherOptions(req.user.schoolId,year);}
+
   @Get(':id')
   @RequirePermissions('STAFF_VIEW')
   findOne(@Req() req: any, @Param('id') id: string) {
@@ -50,6 +56,18 @@ export class TeachersController {
     return this.teachersService.remove(id, req.user.schoolId);
   }
 
+  @Put(':id/teaching-setup')
+  @RequirePermissions('STAFF_UPDATE')
+  teachingSetup(@Req()req:any,@Param('id')id:string,@Body()d:any){return this.teachersService.saveTeachingSetup(id,req.user.schoolId,d);}
+
+  @Put(':id/eligibility')
+  @RequirePermissions('STAFF_UPDATE')
+  eligibility(@Req()req:any,@Param('id')id:string,@Body()d:any){return this.teachersService.saveEligibility(id,req.user.schoolId,d);}
+
+  @Put(':id/capabilities')
+  @RequirePermissions('STAFF_UPDATE')
+  capabilities(@Req()req:any,@Param('id')id:string,@Body()d:any){return this.teachersService.saveCapabilities(id,req.user.schoolId,d.subjectIds);}
+
   @Post(':id/assignments')
   @RequirePermissions('STAFF_UPDATE')
   assign(@Req() req: any, @Param('id') id: string, @Body() dto: CreateTeacherAssignmentDto) {
@@ -61,6 +79,10 @@ export class TeachersController {
   assignments(@Req() req: any, @Param('id') id: string) {
     return this.teachersService.findAssignments(id, req.user.schoolId);
   }
+
+  @Delete(':id/subject-assignments/:assignmentId')
+  @RequirePermissions('SUBJECT_TEACHER_MANAGE')
+  removeSubjectAssignment(@Req()req:any,@Param('id')id:string,@Param('assignmentId')assignmentId:string){return this.teachersService.removeSubjectAssignment(id,assignmentId,req.user.schoolId);}
 
   @Delete(':id/assignments/:assignmentId')
   @RequirePermissions('STAFF_UPDATE')

@@ -76,7 +76,7 @@ export class SchoolsService {
     }
 
     const adminEmail = data.adminEmail.trim().toLowerCase();
-    const existingAdmin = await this.prisma.user.findUnique({
+    const existingAdmin = await this.prisma.user.findFirst({
       where: { email: adminEmail },
     });
 

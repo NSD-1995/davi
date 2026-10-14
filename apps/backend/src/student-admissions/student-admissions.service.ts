@@ -25,7 +25,7 @@ export class StudentAdmissionsService {
       const enrollment = await tx.studentEnrollment.create({ data: { schoolId, studentId: student.id, academicYearId, classId, sectionId, admissionNumber, rollNumber: data.enrollment.rollNumber?.trim() || null }, include: { school: true, academicYear: true, schoolClass: true, section: true } });
       const linkedParents = [];
       for (const input of parentInputs) {
-        let user = await tx.user.findFirst({ where: { OR: [{ username: input.mobile }, { phone: input.mobile }] }, include: { parent: true } }); const existed = Boolean(user);
+        let user = await tx.user.findFirst({ where: { schoolId: null, OR: [{ username: input.mobile }, { phone: input.mobile }] }, include: { parent: true } }); const existed = Boolean(user);
         if (!user) user = await tx.user.create({ data: { schoolId: null, username: input.mobile, email: input.email?.trim().toLowerCase() || `${input.mobile}@login.davi.local`, passwordHash, firstName: this.required(input.firstName, 'parent.firstName'), lastName: input.lastName?.trim() || '', phone: input.mobile, mustChangePassword: true }, include: { parent: true } });
         const parent = user.parent ?? await tx.parent.create({ data: { userId: user.id } });
         let membership = await tx.parentSchoolMembership.findUnique({ where: { parentId_schoolId: { parentId: parent.id, schoolId } } });

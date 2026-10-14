@@ -1,0 +1,56 @@
+'use client';
+import {useSchoolAcademicGroups} from '../../../../lib/school-academic-groups-context';
+import Link from 'next/link';
+import {useEffect,useState} from 'react';
+import {ACADEMIC_GROUPS} from '../../../../lib/academic-groups';
+import {responsibilityRows,GroupResponsibility} from '../../../../lib/teaching-responsibilities';
+import {ApiError,timetableRulesApi} from '../../../../lib/api';
+import {useAuth} from '../../../../lib/auth-context';
+import {useAcademicYear} from '../../../../lib/academic-year-context';
+import {EmptyState,ErrorState,LoadingState,PageHeader} from '../../../../components/ui';
+import {ResponsibilityChoices} from '../../../../components/group-responsibility-table';
+import {TimetableResult} from '../../../../components/timetable-result';
+
+type Assignment=GroupResponsibility&{teacherId:string;canSubstitute:boolean};
+export default function AcademicGroupsPage(){
+ const {groups:schoolGroups,loading:groupsLoading,error:groupsError,reload:reloadGroups}=useSchoolAcademicGroups();
+
+ const {session,can}=useAuth(),{selected}=useAcademicYear();
+ const [selectedSubjects,setSelectedSubjects]=useState<string[]>([]);
+ const [group,setGroup]=useState(''),[data,setData]=useState<any>(),[rows,setRows]=useState<Assignment[]>([]),[initial,setInitial]=useState('[]');
+ const [loading,setLoading]=useState(false),[busy,setBusy]=useState(false),[error,setError]=useState(''),[notice,setNotice]=useState(''),[result,setResult]=useState<any>();
+ useEffect(()=>{if(!groupsLoading)setGroup(current=>schoolGroups.some(g=>g.id===current)?current:schoolGroups[0]?.id||'');},[schoolGroups,groupsLoading]);
+ const editable=can('STAFF_UPDATE')&&can('TIMETABLE_UPDATE'),dirty=JSON.stringify(rows)!==initial;
+ const accept=(d:any)=>{
+  setData(d);const assignments=d.teachers.flatMap((teacher:any)=>{const row=responsibilityRows(teacher,d.subjects,d.classes).find(r=>r.groupId===group);return row&&(row.subjectIds.length||teacher.timetableEligibility?.academicGroups?.includes(group))?[{...row,teacherId:teacher.id,canSubstitute:teacher.timetableEligibility?.canSubstitute===true}]:[]});
+  setRows(assignments);setInitial(JSON.stringify(assignments));
+ };
+ useEffect(()=>{let active=true;setData(undefined);setRows([]);setInitial('[]');setError('');setNotice('');setSelectedSubjects([]);setResult(undefined);if(!session||!selected||!group){setLoading(false);return;}setLoading(true);
+  timetableRulesApi.groupWorkspace(session.token,selected.id,group).then(d=>{if(active)accept(d)}).catch(e=>{if(active)setError(e.message)}).finally(()=>{if(active)setLoading(false)});return()=>{active=false};
+ },[session?.token,selected?.id,group]);
+ const update=(id:string,row:Assignment)=>setRows(items=>items.map(r=>r.teacherId===id?row:r));
+ const save=async()=>{if(!session||!selected)return;setBusy(true);setError('');setNotice('');try{
+  await timetableRulesApi.saveGroupWorkspace(session.token,{academicYearId:selected.id,groupId:group,assignments:rows.map(({teacherId,subjectIds,classIds,canSubstitute})=>({teacherId,subjectIds,classIds,canSubstitute}))});
+  accept(await timetableRulesApi.groupWorkspace(session.token,selected.id,group));setNotice('Group assignments saved. Other compartment responsibilities are preserved. Regenerate affected timetables.');
+ }catch(e){setError(e instanceof Error?e.message:'Assignments could not be saved.')}finally{setBusy(false)}};
+ const classify=async()=>{if(!session||!selected)return;setBusy(true);setError('');try{await timetableRulesApi.classifyGroupSubjects(session.token,{subjectIds:selectedSubjects,academicGroups:[group]});accept(await timetableRulesApi.groupWorkspace(session.token,selected.id,group));setSelectedSubjects([]);setNotice('Selected subjects assigned to this compartment. Review class assignments before regeneration.');}catch(e){setError(e instanceof Error?e.message:'Subjects could not be classified.')}finally{setBusy(false)}};
+ const generate=async()=>{if(!session||!selected)return;setBusy(true);setResult(undefined);try{setResult(await timetableRulesApi.generate(session.token,{academicYearId:selected.id,groupId:group,date:new Date().toISOString()}))}catch(e){setResult(e instanceof ApiError?e.details:{message:e instanceof Error?e.message:'Generation failed.'})}finally{setBusy(false)}};
+ return <><PageHeader title="Academic groups" description={selected?`${selected.name} · Set up each compartment, check readiness and generate.`:'Select an academic year.'}/>
+ <div className="choice-grid">{schoolGroups.map(g=><button key={g.id} className={`choice ${group===g.id?'selected':''}`} disabled={busy||groupsLoading} onClick={()=>{if(g.id!==group&&(!dirty||window.confirm('Discard unsaved group assignments?')))setGroup(g.id)}}><strong>{g.label}</strong><small>{g.range}</small></button>)}</div>
+ {groupsError&&<ErrorState message={groupsError}/>} {!groupsLoading&&!groupsError&&!schoolGroups.length&&<EmptyState title="No academic groups configured" detail="Create classes using Quick Academic Setup to enable their groups."/>}{error&&<ErrorState message={error}/> } {notice&&<div className="alert">{notice}</div>}
+ {!selected?<EmptyState title="Select an academic year"/>:loading?<LoadingState/>:data&&<>
+ <section className="metric-grid">{[['Classes',data.classes.length],['Subjects',data.subjects.length],['Teachers',rows.filter(r=>r.subjectIds.length).length],['Setup gaps',data.issues.filter((i:any)=>i.severity==='error').length]].map(([label,value])=><article className="metric-card" key={String(label)}><strong>{value}</strong><p>{label}</p></article>)}</section>
+ <section className="card"><div className="card-heading"><div><h2>Setup readiness</h2><p>{data.ready?'Basic setup is complete. Generation checks full staffing, availability and workload feasibility.':'Resolve the setup gaps before generating.'}</p></div>{can('TIMETABLE_GENERATE')&&<button className="button" disabled={busy||dirty||!data.ready} onClick={()=>void generate()}>{busy?'Working…':`Generate ${data.group.label}`}</button>}</div>
+ {!data.classes.length&&<Link href="/academics/classes">Create this group’s classes and sections</Link>}
+ {data.classes.filter((c:any)=>data.issues.some((i:any)=>i.classId===c.id)).map((c:any)=><details key={c.id}><summary>{c.name}: {data.issues.filter((i:any)=>i.classId===c.id).length} setup items</summary><ul>{data.issues.filter((i:any)=>i.classId===c.id).map((issue:any,i:number)=><li key={i} className={issue.severity==='error'?'danger-text':'muted'}><Link href={issue.href}>{issue.message}</Link>{issue.severity==='warning'?' (optional with current rules)':''}</li>)}</ul></details>)}
+ <p className="muted">Teachers shared with other groups keep one workload and availability. Published timetables outside this group are checked for overlaps. Generate all groups together to coordinate new drafts.</p><div className="button-row"><Link className="button secondary" href="/academics/timetables">Review / generate all timetables</Link><Link className="text-button" href="/academics/period-templates">School timings</Link></div></section>
+ <TimetableResult result={result}/>
+ <section className="card"><h2>{data.group.label}: teacher assignments</h2><p>Choose responsible subjects and classes for each teacher. A teacher can appear in multiple compartments with different subjects. Clearing a row’s subjects removes responsibility for this compartment when saved.</p>
+ <div className="table-wrap"><table><thead><tr><th>Teacher</th><th>Responsible subjects</th><th>Classes</th><th>Substitution</th></tr></thead><tbody>{rows.map(row=>{const teacher=data.teachers.find((t:any)=>t.id===row.teacherId);return <tr key={row.teacherId}><td><Link href={`/people/teachers/${row.teacherId}`}>{teacher?.user.firstName} {teacher?.user.lastName}</Link></td><ResponsibilityChoices row={row} subjects={data.subjects} classes={data.classes} disabled={busy||!editable} onChange={next=>update(row.teacherId,{...row,...next})}/><td><label><input type="checkbox" disabled={busy||!editable} checked={row.canSubstitute} onChange={e=>update(row.teacherId,{...row,canSubstitute:e.target.checked})}/>Available</label></td></tr>})}</tbody></table></div>
+ {editable&&<><label>Add teacher <select disabled={busy} value="" onChange={e=>{if(e.target.value){const t=data.teachers.find((t:any)=>t.id===e.target.value);setRows([...rows,{teacherId:t.id,groupId:group,subjectIds:[],classIds:null,canSubstitute:t.timetableEligibility?.canSubstitute===true}])}}}><option value="">Choose a teacher, including staff from other compartments</option>{data.teachers.filter((t:any)=>!rows.some(r=>r.teacherId===t.id)).map((t:any)=><option key={t.id} value={t.id}>{t.user.firstName} {t.user.lastName}</option>)}</select></label><p className="muted">Substitution availability applies to the teacher across all their compartments. Existing allowed-class restrictions still apply; adjust them in the teacher’s profile if needed.</p><div className="form-actions"><button className="button secondary" disabled={busy||!dirty} onClick={()=>setRows(JSON.parse(initial))}>Cancel changes</button><button className="button" disabled={busy||!dirty} onClick={()=>void save()}>{busy?'Saving…':'Save group assignments'}</button></div></>}
+ </section>
+ <section className="card"><h2>Classes and subjects</h2><div className="button-row"><Link href="/academics/classes">Assign subjects to classes</Link><Link href="/academics/subjects">Manage subjects and groups</Link></div>{data.classes.map((c:any)=><article key={c.id}><h3>{c.name}</h3><p>{data.mappings.filter((m:any)=>m.classId===c.id).map((m:any)=>data.subjects.find((s:any)=>s.id===m.subjectId)?.name||'Subject outside group').join(', ')||'No subjects assigned'}</p><div className="button-row">{c.sections.map((section:any)=><Link key={section.id} href={`/academics/workspace/${c.id}/sections/${section.id}?year=${selected.id}`}>Section {section.name}</Link>)}</div></article>)}</section>
+ <section className="card"><h2>Existing setup to review</h2><p>{data.ungroupedTeachers} teachers and {data.ungroupedSubjects} subjects still use broad school-wide setup. Review those that should belong only to specific compartments. Shared subjects may intentionally remain school-wide.</p><details><summary>Show records to review</summary><h3>Teachers</h3>{data.teachersWithoutGroups.map((t:any)=><p key={t.id}><Link href={`/people/teachers/${t.id}`}>{t.user.firstName} {t.user.lastName}</Link></p>)}<h3>Subjects</h3><p>Selecting subjects below makes them specific to this compartment. Use Manage subjects to assign a subject to several groups.</p>{data.subjectsWithoutGroups.map((s:any)=><label className="checkbox" key={s.id}><input type="checkbox" disabled={busy||dirty||!can('SUBJECT_UPDATE')} checked={selectedSubjects.includes(s.id)} onChange={e=>setSelectedSubjects(e.target.checked?[...selectedSubjects,s.id]:selectedSubjects.filter(id=>id!==s.id))}/>{s.name}</label>)}{can('SUBJECT_UPDATE')&&<button className="button secondary" disabled={busy||dirty||!selectedSubjects.length} onClick={()=>void classify()}>Assign selected subjects to {data.group.label}</button>}</details><div className="button-row"><Link href="/people/teachers">Review teacher responsibilities</Link><Link href="/academics/subjects">Review subject groups</Link></div></section>
+ </>}
+ </>;
+}

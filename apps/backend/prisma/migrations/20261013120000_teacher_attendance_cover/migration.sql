@@ -1,0 +1,12 @@
+ALTER TABLE "Teacher" ADD COLUMN "timetableEligibility" JSONB;
+ALTER TABLE "SchoolSetting" ADD COLUMN "coveragePolicy" JSONB;
+ALTER TABLE "StaffAttendance" ADD COLUMN "source" TEXT NOT NULL DEFAULT 'MANUAL', ADD COLUMN "expectedArrivalTime" TEXT;
+ALTER TABLE "TimetableSubstitution" ALTER COLUMN "substituteTeacherId" DROP NOT NULL;
+ALTER TABLE "TimetableSubstitution" ADD COLUMN "source" TEXT NOT NULL DEFAULT 'MANUAL', ADD COLUMN "candidateTeacherIds" TEXT[] NOT NULL DEFAULT ARRAY[]::TEXT[];
+ALTER TABLE "Notification" ADD COLUMN "dedupeKey" TEXT;
+CREATE UNIQUE INDEX "Notification_schoolId_dedupeKey_key" ON "Notification"("schoolId","dedupeKey");
+ALTER TABLE "TimetableSubstitution" ALTER COLUMN "timetableEntryId" DROP NOT NULL;
+ALTER TABLE "TimetableSubstitution" ADD COLUMN "timetablePlanId" TEXT, ADD COLUMN "periodSlotId" TEXT, ADD COLUMN "targetKey" TEXT, ADD COLUMN "originalTeacherId" TEXT;
+ALTER TABLE "TimetableSubstitution" ADD CONSTRAINT "TimetableSubstitution_timetablePlanId_fkey" FOREIGN KEY ("timetablePlanId") REFERENCES "TimetablePlan"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+ALTER TABLE "TimetableSubstitution" ADD CONSTRAINT "TimetableSubstitution_periodSlotId_fkey" FOREIGN KEY ("periodSlotId") REFERENCES "PeriodTimingSlot"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+CREATE UNIQUE INDEX "TimetableSubstitution_schoolId_date_targetKey_key" ON "TimetableSubstitution"("schoolId","date","targetKey");

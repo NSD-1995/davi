@@ -12,17 +12,23 @@ const subject = { id: 'subject-1', schoolId: school.id, name: 'Mathematics', cod
 const year = { id: 'year-1', schoolId: school.id, name: '2026-2027' };
 
 function subjectPrisma(overrides = {}) {
-  return {
+  const prisma = {
     school: { findUnique: async () => school },
     subject: {
       findUnique: async () => subject, findFirst: async () => null,
       findMany: async () => [subject], create: async ({ data }) => ({ id: subject.id, ...data }),
       update: async ({ data }) => ({ ...subject, ...data }), delete: async () => subject,
     },
+    teacher:{findMany:async()=>[],update:async()=>({})},
     academicYearSubject: { count: async () => 0 },
-    classSubject: { count: async () => 0 },
+    classSubject: { count: async () => 0, deleteMany: async () => ({ count: 0 }) },
+    teacherAcademicAssignment: { count: async () => 0, deleteMany: async () => ({ count: 0 }) },
+    timetableEntry: { count: async () => 0 },
+    examSubject: { count: async () => 0 },
     ...overrides,
   };
+  prisma.$transaction = async callback => callback(prisma);
+  return prisma;
 }
 
 test('creates a valid subject and permits the same name/code in another school', async () => {
@@ -134,3 +140,30 @@ test('rejects duplicate class subject IDs and safely unassigns referenced subjec
   const result=await service.replaceSubjects(school.id, year.id, 'class-1', { subjectIds: [] });
   assert.deepEqual(result.subjects,[]);
 });
+
+ test('deletes a subject after class removal leaves only inactive mappings', async () => {
+  const prisma = subjectPrisma();
+  const operations = [];
+  prisma.classSubject.count = async ({where}) => { assert.equal(where.isActive, true); return 0; };
+  prisma.teacherAcademicAssignment.count = async ({where}) => { assert.equal(where.isActive, true); return 0; };
+  prisma.classSubject.deleteMany = async ({where}) => { assert.equal(where.isActive, false); operations.push('class'); };
+  prisma.teacherAcademicAssignment.deleteMany = async ({where}) => { assert.equal(where.isActive, false); operations.push('teacher'); };
+  prisma.subject.delete = async () => { operations.push('subject'); return subject; };
+  await new SubjectsService(prisma).remove(subject.id,school.id);
+  assert.deepEqual(operations,['teacher','class','subject']);
+ });
+ test('preserves subjects referenced by timetables or exams', async () => {
+  for(const model of ['timetableEntry','examSubject']) {
+    const prisma = subjectPrisma();
+    prisma[model].count = async () => 1;
+    let deleted = false;
+    prisma.subject.delete = async () => { deleted = true; };
+    await assert.rejects(new SubjectsService(prisma).remove(subject.id,school.id), /timetable or exam records/);
+    assert.equal(deleted,false);
+  }
+ });
+ test('reports remaining active class assignments', async () => {
+  const prisma = subjectPrisma();
+  prisma.classSubject.count = async () => 2;
+  await assert.rejects(new SubjectsService(prisma).remove(subject.id,school.id), /2 class\(es\)/);
+ });

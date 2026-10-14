@@ -125,11 +125,15 @@ model RolePermission {
 }
 
 model User {
+  @@unique([schoolId, email])
+  @@unique([schoolId, username])
+  @@index([email])
+  @@index([username])
   id                 String     @id @default(uuid())
   schoolId           String?
   school             School?    @relation(fields: [schoolId], references: [id], onDelete: Cascade)
-  email              String     @unique
-  username           String?    @unique
+  email              String
+  username           String?
   passwordHash       String
   firstName          String
   lastName           String
@@ -176,12 +180,15 @@ model SchoolSetting {
   timezone          String?  @default("Africa/Nairobi")
   language          String?  @default("en")
   gradingSystem     String?  @default("percentage")
+  timetableRules    Json?
   attendancePolicy  String?
   examPolicy        String?
   notificationEmail String?
   logoUrl           String?
   createdAt         DateTime @default(now())
   updatedAt         DateTime @updatedAt
+  coveragePolicy Json?
+
 }
 
 model AcademicYear {
@@ -210,6 +217,7 @@ model AcademicYear {
 }
 
 model SchoolClass {
+  academicGroup String?
   id             String        @id @default(uuid())
   schoolId       String
   school         School        @relation(fields: [schoolId], references: [id], onDelete: Cascade)
@@ -254,6 +262,7 @@ model Section {
 }
 
 model Subject {
+  academicGroups String[] @default([])
   id          String   @id @default(uuid())
   schoolId    String
   school      School   @relation(fields: [schoolId], references: [id], onDelete: Cascade)
@@ -334,6 +343,12 @@ model ClassSubject {
   @@unique([academicYearId, classId, subjectId])
   @@index([schoolId, academicYearId, classId])
   @@index([subjectId])
+  preferredPeriods Int[] @default([])
+  avoidPeriods Int[] @default([])
+  allowConsecutive Boolean @default(false)
+  preferredTeacherIds String[] @default([])
+  eligibleTeacherIds String[] @default([])
+
 }
 
 model SchoolProfileOption {
@@ -439,6 +454,8 @@ model StaffAttendance {
   checkIn    DateTime?
   checkOut   DateTime?
   remarks    String?
+  source     String    @default("MANUAL")
+  expectedArrivalTime String?
   markedById String
   school     School    @relation(fields: [schoolId], references: [id], onDelete: Cascade)
   staff      Staff     @relation(fields: [staffId], references: [id], onDelete: Cascade)
@@ -466,6 +483,10 @@ model Teacher {
   timetableEntries    TimetableEntry[]
 
   @@unique([schoolId, teacherCode])
+  timetableEligibility Json?
+  capableSubjectIds String[] @default([])
+  timetableWorkload Json?
+
 }
 
 model TeacherAcademicAssignment {
@@ -591,6 +612,7 @@ model TimetablePlan {
   templateId               String
   status                   String           @default("DRAFT")
   version                  Int              @default(1)
+  supervisionEntries       Json             @default("[]")
   subjectConfigFingerprint String
   generatedAt              DateTime         @default(now())
   publishedAt              DateTime?
@@ -601,6 +623,8 @@ model TimetablePlan {
 
   @@unique([academicYearId, sectionId, version])
   @@index([schoolId, academicYearId, classId, sectionId, status])
+  coverageSubstitutions TimetableSubstitution[]
+
 }
 
 model PeriodTimingTemplate {
@@ -650,6 +674,8 @@ model PeriodTimingSlot {
   updatedAt         DateTime             @updatedAt
 
   @@unique([templateId, sequence])
+  coverageSubstitutions TimetableSubstitution[]
+
 }
 
 model PeriodTemplateAssignment {
@@ -842,18 +868,28 @@ model ClassAnnouncement {
 model TimetableSubstitution {
   id                  String         @id @default(uuid())
   schoolId            String
-  timetableEntryId    String
+  timetableEntryId    String?
+  timetablePlanId     String?
+  periodSlotId        String?
+  targetKey           String?
+  originalTeacherId   String?
   date                DateTime
-  substituteTeacherId String
+  substituteTeacherId String?
+  source              String         @default("MANUAL")
+  candidateTeacherIds String[]       @default([])
   reason              String?
   status              String         @default("SCHEDULED")
   school              School         @relation(fields: [schoolId], references: [id], onDelete: Cascade)
-  timetableEntry      TimetableEntry @relation(fields: [timetableEntryId], references: [id], onDelete: Cascade)
+  timetableEntry      TimetableEntry? @relation(fields: [timetableEntryId], references: [id], onDelete: Cascade)
+  timetablePlan       TimetablePlan? @relation(fields: [timetablePlanId], references: [id], onDelete: Cascade)
+  periodSlot          PeriodTimingSlot? @relation(fields: [periodSlotId], references: [id], onDelete: Restrict)
   createdAt           DateTime       @default(now())
   updatedAt           DateTime       @updatedAt
 
   @@unique([timetableEntryId, date])
   @@index([schoolId, date])
+  @@unique([schoolId, date, targetKey])
+
 }
 
 model Exam {
@@ -930,6 +966,7 @@ model Notification {
   id          String    @id @default(uuid())
   schoolId    String
   recipientId String?
+  dedupeKey   String?
   channel     String
   title       String
   message     String
@@ -941,6 +978,7 @@ model Notification {
   createdAt   DateTime  @default(now())
   updatedAt   DateTime  @updatedAt
 
+  @@unique([schoolId, dedupeKey])
   @@index([schoolId, recipientId, status])
 }
 

@@ -37,7 +37,7 @@ export class ParentsService {
     const current = await this.findOne(id, schoolId); this.requireSchool(schoolId);
     if (data.schoolId !== undefined && data.schoolId !== schoolId) throw new ForbiddenException('A parent cannot be moved to another school.');
     const mobile = data.mobile !== undefined ? this.mobile(data.mobile) : undefined; const email = data.email !== undefined ? data.email.trim().toLowerCase() : undefined;
-    if (mobile || email) { const duplicate = await this.prisma.user.findFirst({ where: { id: { not: current.userId }, OR: [...(mobile ? [{ username: mobile }, { phone: mobile }] : []), ...(email ? [{ email }] : [])] } }); if (duplicate) throw new ConflictException('A login with this mobile number or email already exists.'); }
+    if (mobile || email) { const duplicate = await this.prisma.user.findFirst({ where: { schoolId: null, id: { not: current.userId }, OR: [...(mobile ? [{ username: mobile }, { phone: mobile }] : []), ...(email ? [{ email }] : [])] } }); if (duplicate) throw new ConflictException('A login with this mobile number or email already exists.'); }
     return this.prisma.$transaction(async (tx) => {
       if (data.firstName !== undefined || data.lastName !== undefined || mobile !== undefined || email !== undefined) await tx.user.update({ where: { id: current.userId }, data: { ...(data.firstName !== undefined ? { firstName: this.required(data.firstName, 'firstName') } : {}), ...(data.lastName !== undefined ? { lastName: data.lastName.trim() } : {}), ...(mobile !== undefined ? { phone: mobile, username: mobile } : {}), ...(email !== undefined ? { email: email || `${mobile ?? current.user.phone}@login.davi.local` } : {}) } });
       await tx.parentSchoolMembership.update({ where: { parentId_schoolId: { parentId: id, schoolId } }, data: { ...(data.parentCode !== undefined ? { parentCode: this.required(data.parentCode, 'parentCode') } : {}), ...(data.occupation !== undefined ? { occupation: data.occupation.trim() || null } : {}), ...(data.status !== undefined ? { status: data.status } : {}) } });
@@ -50,7 +50,7 @@ export class ParentsService {
   async onboard(schoolId: string | null, data: OnboardParentDto) {
     this.requireSchool(schoolId); const mobile = this.mobile(data.mobile); const firstName = this.required(data.firstName, 'firstName'); const parentCode = this.required(data.parentCode, 'parentCode');
     if (await this.prisma.parentSchoolMembership.findFirst({ where: { schoolId, parentCode } })) throw new ConflictException('Parent code already exists within this school.');
-    const existingUser = await this.prisma.user.findFirst({ where: { OR: [{ username: mobile }, { phone: mobile }, ...(data.email ? [{ email: data.email.trim().toLowerCase() }] : [])] }, include: { parent: true } });
+    const existingUser = await this.prisma.user.findFirst({ where: { schoolId: null, OR: [{ username: mobile }, { phone: mobile }, ...(data.email ? [{ email: data.email.trim().toLowerCase() }] : [])] }, include: { parent: true } });
     let role = await this.prisma.role.findFirst({ where: { schoolId, code: 'PARENT' } }); if (!role) role = await this.prisma.role.create({ data: { schoolId, name: 'Parent', code: 'PARENT', description: 'Parent portal access' } });
     const temporaryPassword = existingUser ? null : accountCreationPassword();
     const result = await this.prisma.$transaction(async (tx) => {

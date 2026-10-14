@@ -1,5 +1,6 @@
 /*
- * Creates 30 Montessori teaching staff accounts through the DAVI API.
+ * Creates Montessori teaching staff accounts through the DAVI API (5 by default).
+ * Reruns skip matching staff already in this school without changing passwords.
  * The script automatically discovers an active school role whose code contains
  * "TEACHER", so no role ID needs to be copied from the frontend.
  *
@@ -11,9 +12,9 @@
 const baseUrl = (process.env.API_BASE_URL || 'http://localhost:3001/api/v1').replace(/\/$/, '');
 const token = process.env.DAVI_TOKEN;
 const schoolId = process.env.SCHOOL_ID;
-const count = Number(process.env.STAFF_COUNT || 30);
-const start = Number(process.env.STAFF_SEED_START || 1);
-const prefix = process.env.STAFF_SEED_PREFIX || 'MONT-T';
+const count = Number(process.env.STAFF_COUNT || 5);
+const start = Number(process.env.STAFF_SEED_START || 6);
+const prefix = process.env.STAFF_SEED_PREFIX || 'KIDZEE-T';
 
 for (const [key, value] of Object.entries({ DAVI_TOKEN: token, SCHOOL_ID: schoolId })) {
   if (!value) throw new Error(`${key} is required`);
@@ -56,11 +57,28 @@ async function main() {
   const teacherRole = roles.find(role => role.isActive && role.code.toUpperCase().includes('TEACHER'));
   if (!teacherRole) throw new Error('No active teacher role was found for this school. Create a role with TEACHER in its code first.');
   console.log(`Using teacher role: ${teacherRole.name} (${teacherRole.code}).`);
+  const existingStaff = await api(`/schools/${schoolId}/staff`);
   const results = [];
   for (let index = start; index < start + count; index += 1) {
     const payload = staffPayload(index, teacherRole.id);
     try {
+      const matches = existingStaff.filter(staff =>
+        staff.employeeId === payload.employeeId ||
+        staff.user?.username === payload.mobile ||
+        staff.user?.phone === payload.mobile ||
+        staff.user?.email?.toLowerCase() === payload.email);
+      if (matches.length) {
+        const existing = matches[0];
+        const sameAccount = matches.length === 1 &&
+          existing.user?.username === payload.mobile &&
+          existing.user?.email?.toLowerCase() === payload.email &&
+          existing.user?.roles?.some(assignment => assignment.role?.id === teacherRole.id);
+        if (!sameAccount) throw new Error('Employee ID, mobile or email matches different staff or a different role. Review the existing account before seeding.');
+        results.push({ employeeId: existing.employeeId, name: `${existing.user.firstName} ${existing.user.lastName}`, username: existing.user.username, status: 'EXISTS' });
+        continue;
+      }
       const result = await api(`/schools/${schoolId}/staff`, { method: 'POST', body: JSON.stringify(payload) });
+      existingStaff.push(result.staff);
       results.push({ employeeId: payload.employeeId, name: `${payload.firstName} ${payload.lastName}`, username: result.credentials?.username, temporaryPassword: result.credentials?.temporaryPassword, status: 'CREATED' });
     } catch (error) {
       results.push({ employeeId: payload.employeeId, name: `${payload.firstName} ${payload.lastName}`, status: 'FAILED', error: error.message });
@@ -68,8 +86,11 @@ async function main() {
   }
   console.table(results);
   const failed = results.filter(item => item.status === 'FAILED');
-  console.log(`Created ${results.length - failed.length}/${results.length} Montessori teaching staff accounts.`);
-  console.log('Save the displayed temporary passwords securely; they are returned only once.');
+  const created = results.filter(item => item.status === 'CREATED').length;
+  const existing = results.filter(item => item.status === 'EXISTS').length;
+  console.log(`Created ${created}, already existing ${existing}, failed ${failed.length}/${results.length} Montessori teaching staff accounts.`);
+  if (created) console.log('Save the displayed temporary passwords securely; they are returned only once.');
+  if (failed.length) console.log('Mobile numbers and emails are unique within each school. Use an unused STAFF_SEED_START for additional accounts in this school.');
   if (failed.length) process.exitCode = 1;
 }
 

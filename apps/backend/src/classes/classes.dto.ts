@@ -3,6 +3,7 @@ export type SchoolClassStatus = 'ACTIVE' | 'INACTIVE';
 export class CreateSchoolClassDto {
   academicYearId!: string;
   name!: string;
+  academicGroup?: string;
   code?: string;
   capacity?: number;
   status?: SchoolClassStatus;
@@ -20,7 +21,9 @@ export class CreateClassesBulkDto {
   numberOfSections!: number;
   sectionCapacity?: number;
   montessori?: boolean;
+  prePrimary?: boolean;
   primary?: boolean;
+  middle?: boolean;
   secondary?: boolean;
   seniorSecondary?: boolean;
 }
@@ -28,6 +31,7 @@ export class CreateClassesBulkDto {
 export class UpdateSchoolClassDto {
   academicYearId?: string;
   name?: string;
+  academicGroup?: string;
   code?: string;
   capacity?: number;
   status?: SchoolClassStatus;

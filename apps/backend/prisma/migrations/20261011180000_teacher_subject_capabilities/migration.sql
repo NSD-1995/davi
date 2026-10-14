@@ -1,0 +1,1 @@
+ALTER TABLE "Teacher" ADD COLUMN "capableSubjectIds" TEXT[] NOT NULL DEFAULT ARRAY[]::TEXT[];

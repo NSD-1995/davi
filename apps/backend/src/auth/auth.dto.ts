@@ -11,6 +11,8 @@ export class RegisterDto {
 }
 
 export class LoginDto {
+  schoolId?: string;
+  schoolSlug?: string;
   email?: string;
   username?: string;
   password!: string;
