@@ -67,6 +67,19 @@ export class TimetablePlanningService {
   async plans(schoolId:string|null,query:any){this.school(schoolId);const plans=await this.prisma.timetablePlan.findMany({where:{schoolId,academicYearId:query.academicYearId,classId:query.classId,sectionId:query.sectionId},include:{entries:{include:{subject:true,teacher:{include:{user:{select:{id:true,firstName:true,lastName:true}}}},periodSlot:true}},template:{include:{slots:{orderBy:{sequence:'asc'}}}}},orderBy:{version:'desc'}});const ids=[...new Set<string>(plans.flatMap(plan=>((plan.supervisionEntries||[]) as any[]).map(entry=>String(entry.teacherId))))];const teachers=await this.prisma.teacher.findMany({where:{schoolId,id:{in:ids}},select:{id:true,user:{select:{firstName:true,lastName:true}}}});return plans.map(plan=>({...plan,supervisionEntries:((plan.supervisionEntries||[]) as any[]).map(entry=>({...entry,teacher:teachers.find(t=>t.id===entry.teacherId)}))}));}
   async publish(schoolId:string|null,id:string){this.school(schoolId);const plan=await this.prisma.timetablePlan.findFirst({where:{id,schoolId},include:{entries:true}});if(!plan)throw new NotFoundException('Draft not found.');if(plan.entries.some(entry=>entry.conflictCode))throw new ConflictException('Resolve conflicts before publishing.');return this.ruleService.publish(schoolId,id);}
 
+  async removeAll(schoolId:string|null,academicYearId:string) {
+    this.school(schoolId);
+    if(typeof academicYearId!=='string'||!academicYearId.trim())throw new BadRequestException('academicYearId is required.');
+    const year=await this.prisma.academicYear.findFirst({where:{id:academicYearId,schoolId},select:{id:true}});
+    if(!year)throw new NotFoundException('Academic year not found.');
+    return this.prisma.$transaction(async tx=>{
+      const where={schoolId,academicYearId};
+      const entries=await tx.timetableEntry.deleteMany({where});
+      const plans=await tx.timetablePlan.deleteMany({where});
+      return {deletedPlans:plans.count,deletedEntries:entries.count};
+    });
+  }
+
   async remove(schoolId:string|null,id:string) {
     this.school(schoolId);
     const result = await this.prisma.timetablePlan.deleteMany({ where: { id, schoolId } });

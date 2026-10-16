@@ -1,4 +1,5 @@
 import {teachingExclusion} from '../teaching-responsibilities';
+import {externalTimetablePlanIds} from './external-timetable-plans';
 import {academicGroup,subjectInGroup,validGroups} from '../academic-groups';
 import {allowedForClass} from './teacher-eligibility';
 import {distributePeriods} from './automatic-periods';
@@ -65,12 +66,13 @@ export class TimetableRulesService {
    Promise.resolve(templateGenerationRules()),this.db.classSubject.findMany({where:{schoolId:s,academicYearId:year.id,classId:{in:classIds},isActive:true,subject:{status:'ACTIVE'}},include:{subject:true},orderBy:[{displayOrder:'asc'},{subjectId:'asc'}]}),
    this.db.teacherAcademicAssignment.findMany({where:{schoolId:s,academicYearId:year.id,classId:{in:classIds},isActive:true,teacher:{status:'ACTIVE',user:{status:'ACTIVE',staff:{is:{status:'ACTIVE'}}}}}}),
    this.db.teacher.findMany({where:{schoolId:s,status:'ACTIVE',user:{status:'ACTIVE',staff:{is:{status:'ACTIVE'}}}}}),
-   this.db.timetableEntry.findMany({where:{schoolId:s,academicYearId:year.id,sectionId:{notIn:sections.map(x=>x.id)},OR:[{timetablePlan:{status:'PUBLISHED'}},{timetablePlanId:null}]},include:{periodSlot:true}}),
-   this.db.timetablePlan.findMany({where:{schoolId:s,academicYearId:year.id,sectionId:{notIn:sections.map(x=>x.id)},status:'PUBLISHED'},include:{template:{include:{slots:true}}}}),
+   this.db.timetableEntry.findMany({where:{schoolId:s,academicYearId:year.id,sectionId:{notIn:sections.map(x=>x.id)},OR:[{timetablePlan:{status:{in:['DRAFT','PUBLISHED']}}},{timetablePlanId:null}]},include:{periodSlot:true}}),
+   this.db.timetablePlan.findMany({where:{schoolId:s,academicYearId:year.id,sectionId:{notIn:sections.map(x=>x.id)},status:{in:['DRAFT','PUBLISHED']}},include:{template:{include:{slots:true}}}}),
   ]);
   const fixed=d.fixedEntries??[];if(!Array.isArray(fixed)||fixed.some((e:any)=>!e||['sectionId','classId','subjectId','teacherId','periodSlotId'].some(key=>typeof e[key]!=='string')||!Number.isInteger(e.weekday)||e.weekday<1||e.weekday>7))throw new BadRequestException('Fixed entries require class, section, subject, teacher, period slot and a valid weekday.');
-  const c:Context={rules:rules as Rules,slots:[],requirements:[],classTeachers:{},teachers:Object.fromEntries(teachers.map(t=>[t.id,{}])),availability:[],external:external.filter(e=>e.periodSlot).map(e=>({...e,periodSlotId:e.periodSlotId!,startTime:e.periodSlot!.startTime,endTime:e.periodSlot!.endTime})),fixed:fixed.map((e:any)=>({sectionId:e.sectionId,classId:e.classId,subjectId:e.subjectId,teacherId:e.teacherId,periodSlotId:e.periodSlotId,weekday:e.weekday}))};
-  for(const plan of externalPlans)for(const entry of ((plan as any).supervisionEntries||[]) as Entry[]){const slot=plan.template.slots.find(slot=>slot.id===entry.periodSlotId);if(slot)c.external.push({...entry,startTime:slot.startTime,endTime:slot.endTime});}
+  const reservedPlanIds=externalTimetablePlanIds(externalPlans);
+  const c:Context={rules:rules as Rules,slots:[],requirements:[],classTeachers:{},teachers:Object.fromEntries(teachers.map(t=>[t.id,{}])),availability:[],external:external.filter(e=>e.periodSlot&&(!e.timetablePlanId||reservedPlanIds.has(e.timetablePlanId))).map(e=>({...e,periodSlotId:e.periodSlotId!,startTime:e.periodSlot!.startTime,endTime:e.periodSlot!.endTime})),fixed:fixed.map((e:any)=>({sectionId:e.sectionId,classId:e.classId,subjectId:e.subjectId,teacherId:e.teacherId,periodSlotId:e.periodSlotId,weekday:e.weekday}))};
+  for(const plan of externalPlans.filter(plan=>reservedPlanIds.has(plan.id)))for(const entry of ((plan as any).supervisionEntries||[]) as Entry[]){const slot=plan.template.slots.find(slot=>slot.id===entry.periodSlotId);if(slot)c.external.push({...entry,startTime:slot.startTime,endTime:slot.endTime});}
   if(!Array.isArray(c.fixed))throw new BadRequestException('Fixed entries must be an array.');
   const templates=new Map<string,any>();
   for(const section of sections){const timing=await this.db.periodTemplateAssignment.findMany({where:{schoolId:s,academicYearId:year.id,classId:section.classId,isActive:true,effectiveFrom:{lte:date},OR:[{effectiveTo:null},{effectiveTo:{gte:date}}],AND:[{OR:[{sectionId:section.id},{sectionId:null}]}],template:{status:'ACTIVE'}},include:{template:{include:{slots:{orderBy:{sequence:'asc'}}}}},orderBy:{effectiveFrom:'desc'}});const template=(timing.find(t=>t.sectionId===section.id)||timing.find(t=>t.sectionId===null))?.template;if(!template)throw new BadRequestException('Assign and activate a period template for '+section.schoolClass.name+' / Section '+section.name+' before generation.');
