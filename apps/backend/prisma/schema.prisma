@@ -37,6 +37,7 @@ enum ParentStatus {
 }
 
 model School {
+  staffCategoryDefinitions StaffCategoryDefinition[]
   id        String   @id @default(uuid())
   name      String
   shortName String?
@@ -70,6 +71,16 @@ model School {
   teacherAssignments        TeacherAcademicAssignment[]
   studentAttendance         StudentAttendance[]
   staffAttendance           StaffAttendance[]
+  leaveRequests StaffLeaveRequest[]
+  leaveBalances StaffLeaveBalance[]
+  dailyTasks StaffDailyTask[]
+  dailyOverrides DailyTimetableOverride[]
+  attendancePunches AttendancePunch[]
+  attendanceExceptions AttendanceExceptionRequest[]
+  leaveLedger LeaveLedger[]
+  attendanceDays StaffAttendanceDay[]
+  attendanceAudits StaffAttendanceAudit[]
+  staffScopes StaffScopeAssignment[]
   timePeriods               TimePeriod[]
   timetableEntries          TimetableEntry[]
   exams                     Exam[]
@@ -152,6 +163,15 @@ model User {
   parent                  Parent?
   staff                   Staff?
   markedStudentAttendance StudentAttendance[]       @relation("StudentAttendanceMarker")
+  leaveApprovals StaffLeaveRequest[]
+  dailyTaskActors StaffDailyTask[]
+  overrideActors DailyTimetableOverride[]
+  substitutionApprovals TimetableSubstitution[]
+  attendanceExceptionDecisions AttendanceExceptionRequest[]
+  leaveLedgerActors LeaveLedger[]
+  attendanceDayActors StaffAttendanceDay[]
+  attendanceAuditActors StaffAttendanceAudit[]
+  staffScopes StaffScopeAssignment[]
   markedStaffAttendance   StaffAttendance[]         @relation("StaffAttendanceMarker")
   notifications           Notification[]
   auditLogs               AuditLog[]                @relation("AuditActor")
@@ -187,6 +207,7 @@ model SchoolSetting {
   logoUrl           String?
   createdAt         DateTime @default(now())
   updatedAt         DateTime @updatedAt
+  operationsPolicy Json?
   coveragePolicy Json?
 
 }
@@ -289,6 +310,9 @@ model Staff {
   schoolId    String
   userId      String            @unique
   employeeId  String
+  staffCategory String @default("NON_TEACHING")
+  staffCategoryId String?
+  categoryDefinition StaffCategoryDefinition? @relation(fields:[staffCategoryId],references:[id],onDelete:Restrict)
   joiningDate DateTime?
   status      UserStatus        @default(ACTIVE)
   school      School            @relation(fields: [schoolId], references: [id], onDelete: Cascade)
@@ -296,8 +320,25 @@ model Staff {
   createdAt   DateTime          @default(now())
   updatedAt   DateTime          @updatedAt
   attendance  StaffAttendance[]
+  attendancePunches AttendancePunch[]
+  attendanceExceptions AttendanceExceptionRequest[]
+  attendanceAudits StaffAttendanceAudit[]
+  leaveRequests StaffLeaveRequest[]
+  leaveBalances StaffLeaveBalance[]
+  dailyTasks StaffDailyTask[]
 
   @@unique([schoolId, employeeId])
+}
+
+model StaffCategoryDefinition {
+ school School @relation(fields:[schoolId],references:[id],onDelete:Cascade)
+ id String @id @default(uuid())
+ schoolId String
+ name String
+ classification String
+ createdAt DateTime @default(now())
+ staff Staff[]
+ @@unique([schoolId,name])
 }
 
 model AcademicYearSubject {
@@ -455,6 +496,10 @@ model StaffAttendance {
   checkOut   DateTime?
   remarks    String?
   source     String    @default("MANUAL")
+  unavailableFrom String?
+  unavailableUntil String?
+  markedAt DateTime @default(now())
+  version Int @default(1)
   expectedArrivalTime String?
   markedById String
   school     School    @relation(fields: [schoolId], references: [id], onDelete: Cascade)
@@ -562,6 +607,7 @@ model TimetableEntry {
   timetablePlan   TimetablePlan?          @relation(fields: [timetablePlanId], references: [id], onDelete: Cascade)
   createdAt       DateTime                @default(now())
   updatedAt       DateTime                @updatedAt
+  overrides DailyTimetableOverride[]
   substitutions   TimetableSubstitution[]
 
   @@unique([academicYearId, sectionId, weekday, periodId])
@@ -866,6 +912,12 @@ model ClassAnnouncement {
 }
 
 model TimetableSubstitution {
+  approvedById String?
+  approvedAt DateTime?
+  acknowledgedAt DateTime?
+  notifiedAt DateTime?
+  version Int @default(1)
+  approvedBy User? @relation(fields:[approvedById],references:[id],onDelete:Restrict)
   id                  String         @id @default(uuid())
   schoolId            String
   timetableEntryId    String?
@@ -1162,4 +1214,193 @@ model StudentParent {
   parent  Parent  @relation(fields: [parentId], references: [id], onDelete: Cascade)
 
   @@unique([studentId, parentId])
+}
+
+model StaffAttendanceDay {
+ id String @id @default(uuid())
+ schoolId String
+ date DateTime @db.Date
+ locked Boolean @default(false)
+ actorId String
+ reason String
+ updatedAt DateTime @updatedAt
+ school School @relation(fields:[schoolId], references:[id], onDelete:Cascade)
+ actor User @relation(fields:[actorId], references:[id], onDelete:Restrict)
+ @@unique([schoolId,date])
+}
+model StaffAttendanceAudit {
+ id String @id @default(uuid())
+ schoolId String
+ staffId String
+ date DateTime @db.Date
+ actorId String
+ reason String
+ before Json?
+ after Json
+ createdAt DateTime @default(now())
+ school School @relation(fields:[schoolId], references:[id], onDelete:Cascade)
+ staff Staff @relation(fields:[staffId], references:[id], onDelete:Restrict)
+ actor User @relation(fields:[actorId], references:[id], onDelete:Restrict)
+ @@index([schoolId,date,staffId])
+}
+model StaffScopeAssignment {
+ id String @id @default(uuid())
+ schoolId String
+ userId String
+ schoolWide Boolean @default(false)
+ departmentValues String[] @default([])
+ groupIds String[] @default([])
+ classIds String[] @default([])
+ sectionIds String[] @default([])
+ staffIds String[] @default([])
+ createdAt DateTime @default(now())
+ updatedAt DateTime @updatedAt
+ school School @relation(fields:[schoolId], references:[id], onDelete:Cascade)
+ user User @relation(fields:[userId], references:[id], onDelete:Cascade)
+ @@unique([schoolId,userId])
+}
+
+model StaffLeaveRequest {
+ id String @id @default(uuid())
+ schoolId String
+ staffId String
+ leaveType String
+ startDate DateTime @db.Date
+ endDate DateTime @db.Date
+ halfDay String?
+ reason String
+ status String @default("PENDING")
+ approverId String?
+ decisionReason String?
+ decidedAt DateTime?
+ ledger LeaveLedger[]
+ balanceDebited Boolean @default(false)
+ chargedDays Float @default(0)
+ version Int @default(1)
+ createdAt DateTime @default(now())
+ updatedAt DateTime @updatedAt
+ school School @relation(fields:[schoolId],references:[id],onDelete:Cascade)
+ staff Staff @relation(fields:[staffId],references:[id],onDelete:Restrict)
+ approver User? @relation(fields:[approverId],references:[id],onDelete:Restrict)
+ @@index([schoolId,status,startDate,endDate])
+ @@index([staffId,startDate,endDate])
+}
+model StaffLeaveBalance {
+ id String @id @default(uuid())
+ schoolId String
+ staffId String
+ leaveType String
+ year Int
+ periodKey String
+ periodStart DateTime? @db.Date
+ periodEnd DateTime? @db.Date
+ manualAllocation Boolean @default(true)
+ policySnapshot Json?
+ ledger LeaveLedger[]
+ entitlement Float @default(0)
+ used Float @default(0)
+ updatedAt DateTime @updatedAt
+ school School @relation(fields:[schoolId],references:[id],onDelete:Cascade)
+ staff Staff @relation(fields:[staffId],references:[id],onDelete:Restrict)
+ @@unique([schoolId,staffId,leaveType,periodKey])
+ @@index([schoolId,staffId,year])
+}
+model StaffDailyTask {
+ id String @id @default(uuid())
+ schoolId String
+ staffId String
+ date DateTime @db.Date
+ startTime String
+ endTime String
+ title String
+ description String?
+ priority String @default("NORMAL")
+ status String @default("ASSIGNED")
+ actorId String
+ version Int @default(1)
+ createdAt DateTime @default(now())
+ updatedAt DateTime @updatedAt
+ school School @relation(fields:[schoolId],references:[id],onDelete:Cascade)
+ staff Staff @relation(fields:[staffId],references:[id],onDelete:Restrict)
+ actor User @relation(fields:[actorId],references:[id],onDelete:Restrict)
+ @@index([schoolId,date,status])
+ @@index([staffId,date])
+}
+model DailyTimetableOverride {
+ id String @id @default(uuid())
+ schoolId String
+ timetableEntryId String
+ date DateTime @db.Date
+ status String @default("CANCELLED")
+ reason String
+ actorId String
+ createdAt DateTime @default(now())
+ updatedAt DateTime @updatedAt
+ school School @relation(fields:[schoolId],references:[id],onDelete:Cascade)
+ timetableEntry TimetableEntry @relation(fields:[timetableEntryId],references:[id],onDelete:Cascade)
+ actor User @relation(fields:[actorId],references:[id],onDelete:Restrict)
+ @@unique([schoolId,timetableEntryId,date])
+ @@index([schoolId,date])
+}
+
+model AttendancePunch {
+ id String @id @default(uuid())
+ schoolId String
+ staffId String
+ date DateTime @db.Date
+ kind String
+ recordedAt DateTime @default(now())
+ latitude Float?
+ longitude Float?
+ accuracy Float?
+ distance Float?
+ locationVerified Boolean @default(false)
+ locationExpiresAt DateTime?
+ earlyDeparture Boolean @default(false)
+ school School @relation(fields:[schoolId],references:[id],onDelete:Cascade)
+ staff Staff @relation(fields:[staffId],references:[id],onDelete:Restrict)
+ @@unique([staffId,date,kind])
+ @@index([schoolId,date])
+ @@index([locationExpiresAt])
+}
+model AttendanceExceptionRequest {
+ id String @id @default(uuid())
+ schoolId String
+ staffId String
+ date DateTime @db.Date
+ kind String
+ reason String
+ requestedStatus String @default("PRESENT")
+ requestedCheckIn DateTime?
+ requestedCheckOut DateTime?
+ status String @default("PENDING")
+ decidedById String?
+ decisionReason String?
+ decidedAt DateTime?
+ createdAt DateTime @default(now())
+ updatedAt DateTime @updatedAt
+ school School @relation(fields:[schoolId],references:[id],onDelete:Cascade)
+ staff Staff @relation(fields:[staffId],references:[id],onDelete:Restrict)
+ decidedBy User? @relation(fields:[decidedById],references:[id],onDelete:Restrict)
+ @@index([schoolId,status,date])
+ @@index([staffId,date])
+}
+model LeaveLedger {
+ id String @id @default(uuid())
+ schoolId String
+ balanceId String
+ leaveRequestId String?
+ actorId String?
+ kind String
+ days Float
+ effectiveDate DateTime @db.Date
+ dedupeKey String
+ reason String
+ createdAt DateTime @default(now())
+ school School @relation(fields:[schoolId],references:[id],onDelete:Cascade)
+ balance StaffLeaveBalance @relation(fields:[balanceId],references:[id],onDelete:Restrict)
+ leaveRequest StaffLeaveRequest? @relation(fields:[leaveRequestId],references:[id],onDelete:Restrict)
+ actor User? @relation(fields:[actorId],references:[id],onDelete:Restrict)
+ @@unique([schoolId,dedupeKey])
+ @@index([schoolId,balanceId,effectiveDate])
 }

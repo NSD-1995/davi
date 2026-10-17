@@ -2,6 +2,22 @@ const { PrismaClient } = require('@prisma/client');
 const prisma = new PrismaClient();
 
 const codes = [
+  'STAFF_CATEGORY_MANAGE',
+  'staff.attendance.view',
+  'staff.attendance.mark',
+  'staff.attendance.override',
+  'staff.attendance.manage',
+  'staff.attendance.policy.manage',
+  'staff.leave.policy.manage',
+  'staff.leave.request',
+  'staff.leave.approve',
+  'timetable.substitution.view',
+  'timetable.substitution.generate',
+  'timetable.substitution.approve',
+  'timetable.substitution.override',
+  'timetable.substitution.cancel',
+  'operations.dashboard.view',
+  'operations.tasks.manage',
   'DASHBOARD_VIEW', 'SCHOOL_PROFILE_VIEW', 'SCHOOL_PROFILE_UPDATE',
   'ACADEMIC_YEAR_VIEW', 'ACADEMIC_YEAR_CREATE', 'ACADEMIC_YEAR_UPDATE',
   'CLASS_VIEW', 'CLASS_CREATE', 'CLASS_UPDATE', 'CLASS_DELETE',
@@ -28,9 +44,9 @@ const codes = [
 
 async function main() {
   for (const code of codes) {
-    const separator = code.lastIndexOf('_');
+    const separator = code.includes('.') ? code.lastIndexOf('.') : code.lastIndexOf('_');
     await prisma.permission.upsert({
-      where: { code }, update: {},
+      where: { code }, update: { module: code.slice(0, separator), action: code.slice(separator + 1) },
       create: { code, module: code.slice(0, separator), action: code.slice(separator + 1), description: code.toLowerCase().replaceAll('_', ' ') },
     });
   }
@@ -44,6 +60,9 @@ async function main() {
       skipDuplicates: true,
     });
   }
+  const staffRoles = await prisma.role.findMany({where:{code:{in:['TEACHER','STAFF']}},select:{id:true}});
+  const requestPermission = await prisma.permission.findUnique({where:{code:'staff.leave.request'}});
+  if(requestPermission && staffRoles.length) await prisma.rolePermission.createMany({data:staffRoles.map(role=>({roleId:role.id,permissionId:requestPermission.id})),skipDuplicates:true});
 }
 
 main().finally(() => prisma.$disconnect());

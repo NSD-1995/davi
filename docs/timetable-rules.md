@@ -117,3 +117,29 @@ Generate a single compartment from its workspace or choose a compartment on Time
 Existing setup to review lists broad teacher profiles and ungrouped subjects. Select ungrouped subjects and assign them to the current compartment in bulk, or edit a subject to choose several groups. Bulk classification replaces school-wide subject scope; existing class mappings and timetables are preserved for review. Group membership itself does not grant login permissions.
 
 API additions: GET/PUT /api/v1/timetable-planning/group-workspace (GET academicYearId and groupId; PUT academicYearId, groupId, assignments). GET requires TIMETABLE_VIEW; saving the teacher table requires STAFF_UPDATE and TIMETABLE_UPDATE. PUT /api/v1/timetable-planning/group-subjects accepts subjectIds and academicGroups and requires SUBJECT_UPDATE. Generation accepts optional groupId and rejects invalid groups or groups without eligible sections.
+
+
+## Publish all timetables
+
+The Timetables page offers Publish all (count) to users with TIMETABLE_PUBLISH.
+It publishes the latest drafts matching the selected academic group/class filters
+in the selected academic year. Choose Whole school and All classes for the full
+year's current drafts. Older versions and already-published sections are skipped.
+
+POST /api/v1/timetable-planning/plans/publish-all accepts academicYearId and planIds.
+The server requires each selected ID to be the latest draft for its section in
+that school/year, validates the combined schedules (including teacher conflicts,
+workload, template and subject requirements), then archives superseded published
+versions and publishes the batch in one serializable transaction. Any validation
+failure or concurrent change prevents partial publication. Existing per-section
+Publish remains available.
+
+
+## Period template version display
+
+Period Templates shows only the highest version in each template family in the
+Latest versions table. Earlier versions are kept in a separate, collapsed Older
+versions section, with their original status and effective date. Families are
+identified by familyId, so independent templates with the same name remain separate.
+This is a display change: older versions remain available to existing published
+timetables, and publishing a regenerated timetable is still a separate action.

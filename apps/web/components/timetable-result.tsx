@@ -1,6 +1,7 @@
 'use client';
 export function TimetableResult({result,sectionLabels={}}:{result:any;sectionLabels?:Record<string,string>}){
  if(!result)return null;
+ if(result.success&&result.message)return <section className="alert" role="status"><h3>{result.message}</h3></section>;
  if(result.valid===false)return <section className="alert error"><h3>Timetable validation failed</h3><ul>{result.errors.map((e:any,i:number)=><li key={i}>{e.message||String(e.code).replace(/_/g,' ')}{e.subject?' · '+e.subject:''}{e.weekday?' · weekday '+e.weekday:''}</li>)}</ul></section>;
  const summary=result.validation?.summary||result.summary;
  if(result.reason||result.message)return <section className="alert error"><h3>Timetable generation failed</h3><p>{result.reason||result.message}</p>{result.staffing?.periods?.length>0&&<ul>{result.staffing.periods.map((p:any,i:number)=><li key={i}>{['','Mon','Tue','Wed','Thu','Fri','Sat','Sun'][p.weekday]}, {p.startTime}?{p.endTime}: {p.sectionsRequiringTeacher} sections need teachers; {p.eligibleAvailableTeachers} eligible teachers available. Shortage: {p.shortage}.</li>)}</ul>}{result.suggestions?.length>0&&<ul>{result.suggestions.map((s:string)=><li key={s}>{s}</li>)}</ul>}</section>;

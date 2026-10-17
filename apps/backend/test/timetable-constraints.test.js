@@ -84,3 +84,13 @@ test('publishing a valid draft archives the old version in the same transaction'
  const c=context(1,1,1,[1]);const operations=[];const db={$transaction:async callback=>callback({timetablePlan:{findFirst:async()=>({id:'plan',status:'DRAFT',academicYearId:'year',sectionId:'s0',entries:[entry()],supervisionEntries:[]}),updateMany:async()=>operations.push('archive'),update:async({data})=>{operations.push('publish');return data;}}})};
  const service=new TimetableRulesService(db);service.context=async()=>({c});assert.equal((await service.publish('school','plan')).status,'PUBLISHED');assert.deepEqual(operations,['archive','publish']);
 });
+
+function publishBatchFixture(entries=[entry(),entry('s1','t1','subject1')]){
+ const operations=[],c=context(2,2,1,[1]);
+ const plans=entries.map((e,i)=>({id:'plan'+i,status:'DRAFT',academicYearId:'year',sectionId:'s'+i,entries:[e],supervisionEntries:[]}));
+ const db={$transaction:async(fn,options)=>{assert.equal(options.isolationLevel,'Serializable');return fn({timetablePlan:{findMany:async({where})=>{assert.equal(where.schoolId,'school');assert.equal(where.academicYearId,'year');return plans;},updateMany:async({where,data})=>{operations.push(data.status);return{count:2};}}});}};
+ const service=new TimetableRulesService(db);service.context=async(s,d)=>{assert.deepEqual(d.sectionIds,['s0','s1']);return{c};};return{service,operations,plans};
+}
+test('publish all validates the combined schedules and archives/publishes atomically',async()=>{const f=publishBatchFixture();assert.equal((await f.service.publishAll('school',{academicYearId:'year',planIds:['plan0','plan1']})).publishedPlans,2);assert.deepEqual(f.operations,['ARCHIVED','PUBLISHED']);});
+test('publish all rejects a shared-teacher collision before changing any schedule',async()=>{const f=publishBatchFixture([entry(),entry('s1','t0','subject1')]);await assert.rejects(f.service.publishAll('school',{academicYearId:'year',planIds:['plan0','plan1']}),/mandatory validation/);assert.deepEqual(f.operations,[]);});
+test('publish all rejects stale, non-draft, foreign and duplicate selections',async()=>{for(const kind of ['stale','published','foreign','duplicate']){const f=publishBatchFixture();let ids=['plan0','plan1'];if(kind==='stale')f.plans.unshift({...f.plans[0],id:'newer'});if(kind==='published')f.plans[0].status='PUBLISHED';if(kind==='foreign')ids[0]='foreign';if(kind==='duplicate')ids=['plan0','plan0'];await assert.rejects(f.service.publishAll('school',{academicYearId:'year',planIds:ids}));assert.deepEqual(f.operations,[]);}});

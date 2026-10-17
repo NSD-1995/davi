@@ -1,0 +1,2 @@
+INSERT INTO "Permission" ("id","code","module","action","createdAt","updatedAt") VALUES (gen_random_uuid()::text,'timetable.substitution.override','timetable.substitution','override',NOW(),NOW()) ON CONFLICT ("code") DO NOTHING;
+INSERT INTO "RolePermission" ("roleId","permissionId") SELECT r."id",p."id" FROM "Role" r CROSS JOIN "Permission" p WHERE r."code"='SCHOOL_ADMIN' AND p."code"='timetable.substitution.override' ON CONFLICT DO NOTHING;

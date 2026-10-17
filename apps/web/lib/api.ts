@@ -1,3 +1,4 @@
+import {attendanceLocation} from './attendance-location';
 import type { AcademicYear, ClassWorkspace, CreateSchoolResult, DashboardSummary, MyDashboard, Parent, Permission, Role, School, SchoolClass, Section, SectionDashboard, Staff, Student, Subject, User } from './types';
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001/api/v1';
@@ -25,7 +26,7 @@ export const schoolSettingsApi = {
 };
 export const timetableApi = { list: (t: string, yearId: string, classId: string, sectionId: string) => request<Record<string, unknown>[]>(`/timetable/entries?academicYearId=${yearId}&classId=${classId}&sectionId=${sectionId}`, {}, t) };
 export const periodTemplateApi={remove:(t:string,id:string)=>request(`/period-templates/${id}`,{method:'DELETE'},t),list:(t:string,y:string)=>request<any[]>(`/period-templates?academicYearId=${y}`,{},t),get:(t:string,id:string)=>request<any>(`/period-templates/${id}`,{},t),preview:(t:string,d:any)=>request<any[]>('/period-templates/preview',{method:'POST',body:json(d)},t),create:(t:string,d:any)=>request<any>('/period-templates',{method:'POST',body:json(d)},t),update:(t:string,id:string,d:any)=>request<any>(`/period-templates/${id}`,{method:'PATCH',body:json(d)},t),status:(t:string,id:string,status:string)=>request(`/period-templates/${id}/status`,{method:'POST',body:json({status})},t),version:(t:string,id:string,effectiveFrom:string)=>request(`/period-templates/${id}/version`,{method:'POST',body:json({effectiveFrom})},t),assign:(t:string,id:string,d:any)=>request(`/period-templates/${id}/assignments`,{method:'POST',body:json(d)},t),unassign:(t:string,id:string,a:string)=>request(`/period-templates/${id}/assignments/${a}`,{method:'DELETE'},t),affected:(t:string,id:string)=>request<any>(`/period-templates/${id}/affected-timetables`,{},t),resolve:(t:string,y:string,c:string,s:string,date:string)=>request<any>(`/period-templates/resolve?academicYearId=${y}&classId=${c}&sectionId=${s}&date=${date}`,{},t)};
-export const timetablePlanningApi={removeAll:(t:string,y:string)=>request<{deletedPlans:number;deletedEntries:number}>(`/timetable-planning/plans?academicYearId=${encodeURIComponent(y)}`,{method:'DELETE'},t),allPlans:(t:string,y:string)=>request<any[]>(`/timetable-planning/plans?academicYearId=${y}`,{},t),remove:(t:string,id:string)=>request(`/timetable-planning/plans/${id}`,{method:'DELETE'},t),requirements:(t:string,y:string,c:string)=>request<any>(`/timetable-planning/requirements?academicYearId=${y}&classId=${c}`,{},t),saveRequirements:(t:string,d:any)=>request('/timetable-planning/requirements',{method:'PUT',body:json(d)},t),generate:(t:string,d:any)=>request<any>('/timetable-planning/generate',{method:'POST',body:json(d)},t),plans:(t:string,y:string,c:string,s:string)=>request<any[]>(`/timetable-planning/plans?academicYearId=${y}&classId=${c}&sectionId=${s}`,{},t),publish:(t:string,id:string)=>request(`/timetable-planning/plans/${id}/publish`,{method:'POST'},t)};
+export const timetablePlanningApi={publishAll:(t:string,d:{academicYearId:string;planIds:string[]})=>request<{publishedPlans:number}>('/timetable-planning/plans/publish-all',{method:'POST',body:json(d)},t),removeAll:(t:string,y:string)=>request<{deletedPlans:number;deletedEntries:number}>(`/timetable-planning/plans?academicYearId=${encodeURIComponent(y)}`,{method:'DELETE'},t),allPlans:(t:string,y:string)=>request<any[]>(`/timetable-planning/plans?academicYearId=${y}`,{},t),remove:(t:string,id:string)=>request(`/timetable-planning/plans/${id}`,{method:'DELETE'},t),requirements:(t:string,y:string,c:string)=>request<any>(`/timetable-planning/requirements?academicYearId=${y}&classId=${c}`,{},t),saveRequirements:(t:string,d:any)=>request('/timetable-planning/requirements',{method:'PUT',body:json(d)},t),generate:(t:string,d:any)=>request<any>('/timetable-planning/generate',{method:'POST',body:json(d)},t),plans:(t:string,y:string,c:string,s:string)=>request<any[]>(`/timetable-planning/plans?academicYearId=${y}&classId=${c}&sectionId=${s}`,{},t),publish:(t:string,id:string)=>request(`/timetable-planning/plans/${id}/publish`,{method:'POST'},t)};
 export const attendanceApi = {
   list: (t:string,classId:string,sectionId:string,from:string,to:string) => request<Array<{id:string;enrollmentId:string;date:string;status:string;remarks?:string|null}>>(`/attendance/students?classId=${classId}&sectionId=${sectionId}&from=${from}&to=${to}`,{},t),
   mark: (t:string,date:string,records:Array<{enrollmentId:string;status:string;remarks?:string}>) => request('/attendance/students',{method:'POST',body:json({date,records})},t),
@@ -114,6 +115,8 @@ export const permissionApi = {
   },
 };
 export const staffApi = {
+ categories:(t:string,s:string)=>request<any[]>('/schools/'+s+'/staff/categories',{},t),
+ createCategory:(t:string,s:string,d:any)=>request<any>('/schools/'+s+'/staff/categories',{method:'POST',body:json(d)},t),
   list: (t: string, s: string) => request<Staff[]>(`/schools/${s}/staff`, {}, t),
   create: (t: string, s: string, data: Record<string, unknown>) => request<{ message: string; staff: Staff; credentials: { username: string; temporaryPassword: string } }>(`/schools/${s}/staff`, { method: 'POST', body: json(data) }, t),
   update: (t: string, s: string, id: string, data: Record<string, unknown>) => request<Staff>(`/schools/${s}/staff/${id}`, { method: 'PATCH', body: json(data) }, t),
@@ -161,9 +164,33 @@ export const teacherCoverApi={
  policy:(t:string)=>request<any>('/teacher-cover/policy',{},t),
  savePolicy:(t:string,d:any)=>request<any>('/teacher-cover/policy',{method:'PUT',body:json(d)},t),
  refresh:(t:string,date:string)=>request<any>('/teacher-cover/refresh',{method:'POST',body:json({date})},t),
- assign:(t:string,id:string,teacherId:string,date:string)=>request<any>(`/teacher-cover/${id}/assign`,{method:'PUT',body:json({teacherId,date})},t),
+ assign:(t:string,id:string,teacherId:string,date:string,overrideReason?:string)=>request<any>(`/teacher-cover/${id}/assign`,{method:'PUT',body:json({teacherId,date,overrideReason})},t),
  mark:(t:string,d:any)=>request<any>('/attendance/staff',{method:'POST',body:json(d)},t),
- checkIn:(t:string)=>request<any>('/attendance/staff/check-in',{method:'POST'},t),
+ checkIn:(t:string,d:any={})=>request<any>('/attendance/staff/check-in',{method:'POST',body:json(d)},t),
  notifications:(t:string)=>request<any[]>('/notifications',{},t),
  readNotification:(t:string,id:string)=>request<any>(`/notifications/${id}/read`,{method:'PATCH'},t),
 };
+
+export const operationsApi={
+ roster:(t:string,date:string)=>request<any>('/attendance/staff/roster?date='+encodeURIComponent(date),{},t),
+ bulk:(t:string,d:any)=>request<any>('/attendance/staff/bulk',{method:'POST',body:json(d)},t),
+ lock:(t:string,d:any)=>request<any>('/attendance/staff/lock',{method:'POST',body:json(d)},t),
+ get:(t:string,path:string)=>request<any>('/school-operations/'+path,{},t),
+ post:(t:string,path:string,d:any)=>request<any>('/school-operations/'+path,{method:'POST',body:json(d)},t),
+ put:(t:string,path:string,d:any)=>request<any>('/school-operations/'+path,{method:'PUT',body:json(d)},t),
+ approve:(t:string,id:string,date:string,teacherId:string)=>request<any>('/teacher-cover/'+id+'/assign',{method:'PUT',body:json({date,teacherId})},t),
+ cancel:(t:string,id:string,date:string,reason:string)=>request<any>('/teacher-cover/'+id+'/cancel',{method:'POST',body:json({date,reason})},t),
+ acknowledge:(t:string,id:string)=>request<any>('/teacher-cover/'+id+'/acknowledge',{method:'POST'},t),
+ selfPolicy:(t:string)=>request<any>('/attendance/staff/self-policy',{},t),
+ exceptions:(t:string,manage=false)=>request<any[]>('/attendance/staff/exceptions?manage='+manage,{},t),
+ requestException:(t:string,d:any)=>request<any>('/attendance/staff/exceptions',{method:'POST',body:json(d)},t),
+ decideException:(t:string,id:string,d:any)=>request<any>('/attendance/staff/exceptions/'+id+'/decision',{method:'POST',body:json(d)},t),
+ checkOut:(t:string,d:any={})=>request<any>('/attendance/staff/check-out',{method:'POST',body:json(d)},t),
+ history:(t:string,staffId:string,from:string,to:string)=>request<any>('/attendance/staff/history?'+new URLSearchParams({staffId,from,to}),{},t)
+};
+
+export async function punchAttendance(token:string,kind:'CHECK_IN'|'CHECK_OUT') {
+ const own=await operationsApi.selfPolicy(token);
+ const input=own.policy.locationVerificationEnabled?{location:await attendanceLocation(typeof navigator==='undefined'?undefined:navigator.geolocation)}:{};
+ return kind==='CHECK_IN'?teacherCoverApi.checkIn(token,input):operationsApi.checkOut(token,input);
+}
