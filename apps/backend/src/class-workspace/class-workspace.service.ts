@@ -16,7 +16,7 @@ export class ClassWorkspaceService {
       this.prisma.studentAttendance.groupBy({ by: ['enrollmentId', 'status'], where: { schoolId: schoolId!, date: today }, _count: { _all: true } }),
     ]);
     const enrollmentBySection = new Map(enrollments.map(item => [item.sectionId, item._count._all]));
-    const enrollmentRows = await this.prisma.studentEnrollment.findMany({ where: { schoolId: schoolId!, academicYearId, sectionId: { in: sectionIds }, status: 'ACTIVE' }, select: { id: true, sectionId: true } });
+    const enrollmentRows = await this.prisma.studentEnrollment.findMany({ where: { schoolId: schoolId!, academicYearId, status: 'ACTIVE' }, select: { id: true, classId: true, sectionId: true } });
     const sectionByEnrollment = new Map(enrollmentRows.map(item => [item.id, item.sectionId]));
     const attendanceBySection = new Map<string, Record<string, number>>();
     for (const row of attendance) { const section = sectionByEnrollment.get(row.enrollmentId); if (section) { const current = attendanceBySection.get(section) ?? {}; current[row.status] = (current[row.status] ?? 0) + row._count._all; attendanceBySection.set(section, current); } }
@@ -33,7 +33,7 @@ export class ClassWorkspaceService {
         const attendanceTotal=Object.values(marked).reduce((sum,value)=>sum+value,0),teacher=teacherBySection.get(section.id)??null;
         return{id:section.id,name:section.name,status:section.status,capacity:section.capacity,room:section.room,studentCount:total,classTeacher:teacher?true:null,classTeacherDetails:teacher,subjectTeacherCount:subjectTeachersBySection.get(section.id)?.size??0,todayAttendance:{present:marked.PRESENT??0,absent:marked.ABSENT??0,late:marked.LATE??0,notMarked:Math.max(0,total-attendanceTotal)}};
       });
-      return{id:item.id,name:item.name,academicGroup:academicGroup(item),code:item.code,status:item.status,capacity:item.capacity,sectionCount:sections.length,studentCount:sections.reduce((sum,section)=>sum+section.studentCount,0),classTeacherAssignedCount:sections.filter(section=>section.classTeacher).length,classTeacherMissingCount:sections.filter(section=>!section.classTeacher).length,sections};
+      return{id:item.id,name:item.name,academicGroup:academicGroup(item),code:item.code,status:item.status,capacity:item.capacity,sectionCount:sections.length,studentCount:enrollmentRows.filter(row=>row.classId===item.id).length,unassignedStudentCount:enrollmentRows.filter(row=>row.classId===item.id&&!row.sectionId).length,classTeacherAssignedCount:sections.filter(section=>section.classTeacher).length,classTeacherMissingCount:sections.filter(section=>!section.classTeacher).length,sections};
     });
   }
   async dashboard(schoolId: string | null, academicYearId: string, classId: string, sectionId: string) {

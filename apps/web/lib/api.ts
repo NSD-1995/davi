@@ -13,6 +13,32 @@ async function request<T>(path: string, options: RequestInit = {}, token?: strin
   return body as T;
 }
 const json = (value: unknown) => JSON.stringify(value);
+const admissionQuery = (query: Record<string, unknown>) => new URLSearchParams(Object.entries(query).filter(([,value]) => value !== '' && value !== null && value !== undefined).map(([key,value]) => [key,String(value)])).toString();
+export const admissionsApi = {
+  lookups: (t: string) => request<any>('/admissions/lookups', {}, t),
+  list: (t: string, kind: string, query: Record<string, unknown>) => request<any>(`/admissions/${kind}?${admissionQuery(query)}`, {}, t),
+  detail: (t: string, kind: string, id: string) => request<any>(`/admissions/${kind}/${id}`, {}, t),
+  dashboard: (t: string, query: Record<string, unknown>) => request<any>(`/admissions/dashboard?${admissionQuery(query)}`, {}, t),
+  settings: (t: string, body: unknown) => request<any>('/admissions/settings', { method: 'PUT', body: json(body) }, t),
+  create: (t: string, kind: string, body: unknown) => request<any>(`/admissions/${kind}`, { method: 'POST', body: json(body) }, t),
+  action: (t: string, kind: string, id: string, action: string, body: unknown) => request<any>(`/admissions/${kind}/${id}/${action}`, { method: 'POST', body: json(body) }, t),
+  upload: async (t: string, id: string, kind: string, file: File) => {
+    const form = new FormData(); form.set('kind', kind); form.set('file', file);
+    const response = await fetch(`${API_URL}/admissions/applications/${id}/documents`, { method: 'POST', headers: { Authorization: `Bearer ${t}` }, body: form });
+    const body = await response.json(); if (!response.ok) throw new ApiError(messageOf(body), response.status, body); return body;
+  },
+  download: async (t: string, applicationId: string, documentId: string, filename: string) => {
+    const response = await fetch(`${API_URL}/admissions/applications/${applicationId}/documents/${documentId}`, { headers: { Authorization: `Bearer ${t}` } });
+    if (!response.ok) throw new ApiError(messageOf(await response.json().catch(() => null)), response.status);
+    const url = URL.createObjectURL(await response.blob()); const anchor = document.createElement('a'); anchor.href = url; anchor.download = filename; anchor.click(); URL.revokeObjectURL(url);
+  },
+};
+export const enrollmentPlanningApi = {
+  lookups: (t: string) => request<any>('/enrollment-planning/lookups', {}, t),
+  list: (t: string, yearId: string, classId: string) => request<any>(`/enrollment-planning?${admissionQuery({ academicYearId: yearId, classId })}`, {}, t),
+  action: (t: string, action: string, body: unknown) => request<any>(`/enrollment-planning/${action}`, { method: 'POST', body: json(body) }, t),
+  history: (t: string, id: string) => request<any[]>(`/enrollment-planning/${id}/history`, {}, t),
+};
 export const authApi = {
   login: (identifier: string, password: string, schoolSlug?: string) => request<{ token: string; requiresPasswordChange: boolean; user: User }>('/auth/login', { method: 'POST', body: json({ username: identifier, password, schoolSlug }) }),
   me: (token: string) => request<{ user: User; roles: Array<{ id: string; name: string; code: string }>; permissions: string[] }>('/auth/me', {}, token),
@@ -28,11 +54,11 @@ export const timetableApi = { list: (t: string, yearId: string, classId: string,
 export const periodTemplateApi={remove:(t:string,id:string)=>request(`/period-templates/${id}`,{method:'DELETE'},t),list:(t:string,y:string)=>request<any[]>(`/period-templates?academicYearId=${y}`,{},t),get:(t:string,id:string)=>request<any>(`/period-templates/${id}`,{},t),preview:(t:string,d:any)=>request<any[]>('/period-templates/preview',{method:'POST',body:json(d)},t),create:(t:string,d:any)=>request<any>('/period-templates',{method:'POST',body:json(d)},t),update:(t:string,id:string,d:any)=>request<any>(`/period-templates/${id}`,{method:'PATCH',body:json(d)},t),status:(t:string,id:string,status:string)=>request(`/period-templates/${id}/status`,{method:'POST',body:json({status})},t),version:(t:string,id:string,effectiveFrom:string)=>request(`/period-templates/${id}/version`,{method:'POST',body:json({effectiveFrom})},t),assign:(t:string,id:string,d:any)=>request(`/period-templates/${id}/assignments`,{method:'POST',body:json(d)},t),unassign:(t:string,id:string,a:string)=>request(`/period-templates/${id}/assignments/${a}`,{method:'DELETE'},t),affected:(t:string,id:string)=>request<any>(`/period-templates/${id}/affected-timetables`,{},t),resolve:(t:string,y:string,c:string,s:string,date:string)=>request<any>(`/period-templates/resolve?academicYearId=${y}&classId=${c}&sectionId=${s}&date=${date}`,{},t)};
 export const timetablePlanningApi={publishAll:(t:string,d:{academicYearId:string;planIds:string[]})=>request<{publishedPlans:number}>('/timetable-planning/plans/publish-all',{method:'POST',body:json(d)},t),removeAll:(t:string,y:string)=>request<{deletedPlans:number;deletedEntries:number}>(`/timetable-planning/plans?academicYearId=${encodeURIComponent(y)}`,{method:'DELETE'},t),allPlans:(t:string,y:string)=>request<any[]>(`/timetable-planning/plans?academicYearId=${y}`,{},t),remove:(t:string,id:string)=>request(`/timetable-planning/plans/${id}`,{method:'DELETE'},t),requirements:(t:string,y:string,c:string)=>request<any>(`/timetable-planning/requirements?academicYearId=${y}&classId=${c}`,{},t),saveRequirements:(t:string,d:any)=>request('/timetable-planning/requirements',{method:'PUT',body:json(d)},t),generate:(t:string,d:any)=>request<any>('/timetable-planning/generate',{method:'POST',body:json(d)},t),plans:(t:string,y:string,c:string,s:string)=>request<any[]>(`/timetable-planning/plans?academicYearId=${y}&classId=${c}&sectionId=${s}`,{},t),publish:(t:string,id:string)=>request(`/timetable-planning/plans/${id}/publish`,{method:'POST'},t)};
 export const attendanceApi = {
-  list: (t:string,classId:string,sectionId:string,from:string,to:string) => request<Array<{id:string;enrollmentId:string;date:string;status:string;remarks?:string|null}>>(`/attendance/students?classId=${classId}&sectionId=${sectionId}&from=${from}&to=${to}`,{},t),
+  list: (t:string,classId:string,sectionId:string,from:string,to:string) => request<Array<{id:string;enrollmentId:string;date:string;status:string;remarks?:string|null;enrollment?:any}>>(`/attendance/students?classId=${classId}&sectionId=${sectionId}&from=${from}&to=${to}`,{cache: 'no-store'},t),
   mark: (t:string,date:string,records:Array<{enrollmentId:string;status:string;remarks?:string}>) => request('/attendance/students',{method:'POST',body:json({date,records})},t),
 };
 export const examApi = { list: (t: string, yearId: string) => request<Record<string, unknown>[]>(`/exams?academicYearId=${yearId}`, {}, t), results: (t: string, examId: string, classId: string) => request<Record<string, unknown>[]>(`/exams/${examId}/results?classId=${classId}`, {}, t) };
-export const eventApi = { list: (t: string) => request<Record<string, unknown>[]>('/events', {}, t) };
+export const eventApi = { create: (t:string, data:Record<string,unknown>) => request('/events',{method:'POST',body:json(data)},t), list: (t: string) => request<Record<string, unknown>[]>('/events', {}, t) };
 export const reportApi = { students: (t: string, yearId: string, classId: string) => request<Record<string, unknown>[]>(`/reports/students?academicYearId=${yearId}&classId=${classId}`, {}, t) };
 export const schoolApi = {
   current: (t: string) => request<School>('/schools/me/profile', {}, t),
@@ -175,7 +201,7 @@ export const operationsApi={
  roster:(t:string,date:string)=>request<any>('/attendance/staff/roster?date='+encodeURIComponent(date),{},t),
  bulk:(t:string,d:any)=>request<any>('/attendance/staff/bulk',{method:'POST',body:json(d)},t),
  lock:(t:string,d:any)=>request<any>('/attendance/staff/lock',{method:'POST',body:json(d)},t),
- get:(t:string,path:string)=>request<any>('/school-operations/'+path,{},t),
+ get:(t:string,path:string)=>request<any>('/school-operations/'+path,{cache:'no-store'},t),
  post:(t:string,path:string,d:any)=>request<any>('/school-operations/'+path,{method:'POST',body:json(d)},t),
  put:(t:string,path:string,d:any)=>request<any>('/school-operations/'+path,{method:'PUT',body:json(d)},t),
  approve:(t:string,id:string,date:string,teacherId:string)=>request<any>('/teacher-cover/'+id+'/assign',{method:'PUT',body:json({date,teacherId})},t),

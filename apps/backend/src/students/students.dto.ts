@@ -10,6 +10,7 @@ export class CreateStudentDto {
 }
 
 export class UpdateStudentDto {
+  academicYearId?: string;
   userId?: string;
   schoolId?: string;
   studentCode?: string;

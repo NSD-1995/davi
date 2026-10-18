@@ -37,6 +37,12 @@ enum ParentStatus {
 }
 
 model School {
+  admissionEnquiries AdmissionEnquiry[]
+  admissionApplications AdmissionApplication[]
+  admissionPayments AdmissionPayment[]
+  admissionActivities AdmissionActivity[]
+  admissionDocuments AdmissionDocument[]
+  enrollmentMovements EnrollmentMovement[]
   staffCategoryDefinitions StaffCategoryDefinition[]
   id        String   @id @default(uuid())
   name      String
@@ -193,6 +199,7 @@ model UserRole {
 }
 
 model SchoolSetting {
+  admissionsPolicy Json?
   id                String   @id @default(uuid())
   schoolId          String   @unique
   school            School   @relation(fields: [schoolId], references: [id], onDelete: Cascade)
@@ -213,6 +220,8 @@ model SchoolSetting {
 }
 
 model AcademicYear {
+  admissionEnquiries AdmissionEnquiry[]
+  admissionApplications AdmissionApplication[]
   id        String    @id @default(uuid())
   schoolId  String
   school    School    @relation(fields: [schoolId], references: [id], onDelete: Cascade)
@@ -238,6 +247,11 @@ model AcademicYear {
 }
 
 model SchoolClass {
+  admissionEnquiries AdmissionEnquiry[]
+  admissionApplications AdmissionApplication[]
+  movementsFrom EnrollmentMovement[] @relation("MovementFromClass")
+  movementsTo EnrollmentMovement[] @relation("MovementToClass")
+  historicalAttendance StudentAttendance[] @relation("AttendanceClassHistory")
   academicGroup String?
   id             String        @id @default(uuid())
   schoolId       String
@@ -263,6 +277,11 @@ model SchoolClass {
 }
 
 model Section {
+  admissionApplications AdmissionApplication[]
+  movementsFrom EnrollmentMovement[] @relation("MovementFromSection")
+  movementsTo EnrollmentMovement[] @relation("MovementToSection")
+  historicalAttendance StudentAttendance[] @relation("AttendanceSectionHistory")
+  historicalMarks StudentMark[] @relation("MarkSectionHistory")
   id                        String                      @id @default(uuid())
   schoolId                  String
   school                    School                      @relation(fields: [schoolId], references: [id], onDelete: Cascade)
@@ -306,6 +325,7 @@ model Subject {
 }
 
 model Staff {
+  assignedEnquiries AdmissionEnquiry[]
   id          String            @id @default(uuid())
   schoolId    String
   userId      String            @unique
@@ -442,6 +462,9 @@ model Student {
 }
 
 model StudentEnrollment {
+  version Int @default(1)
+  admissionApplication AdmissionApplication?
+  movements EnrollmentMovement[]
   id                  String               @id @default(uuid())
   schoolId            String
   studentId           String
@@ -469,6 +492,10 @@ model StudentEnrollment {
 }
 
 model StudentAttendance {
+  snapshotClass SchoolClass? @relation("AttendanceClassHistory", fields: [classIdSnapshot], references: [id], onDelete: Restrict)
+  snapshotSection Section? @relation("AttendanceSectionHistory", fields: [sectionIdSnapshot], references: [id], onDelete: Restrict)
+  classIdSnapshot String?
+  sectionIdSnapshot String?
   id           String            @id @default(uuid())
   schoolId     String
   enrollmentId String
@@ -982,6 +1009,9 @@ model ExamSubject {
 }
 
 model StudentMark {
+  snapshotSection Section? @relation("MarkSectionHistory", fields: [sectionIdSnapshot], references: [id], onDelete: Restrict)
+  locationSnapshotted Boolean @default(false)
+  sectionIdSnapshot String?
   id            String            @id @default(uuid())
   examSubjectId String
   enrollmentId  String
@@ -994,6 +1024,149 @@ model StudentMark {
   updatedAt     DateTime          @updatedAt
 
   @@unique([examSubjectId, enrollmentId])
+}
+
+model AdmissionEnquiry {
+  academicYear AcademicYear @relation(fields: [academicYearId], references: [id], onDelete: Restrict)
+  schoolClass SchoolClass @relation(fields: [classId], references: [id], onDelete: Restrict)
+  assignedStaff Staff? @relation(fields: [assignedStaffId], references: [id], onDelete: Restrict)
+  id String @id @default(uuid())
+  schoolId String
+  school School @relation(fields: [schoolId], references: [id], onDelete: Restrict)
+  number String
+  studentName String
+  parentName String
+  mobile String
+  email String?
+  academicYearId String
+  classId String
+  source String
+  status String @default("NEW")
+  assignedStaffId String?
+  enquiryDate DateTime @default(now())
+  nextFollowUpAt DateTime?
+  remarks String?
+  version Int @default(1)
+  applications AdmissionApplication[]
+  activities AdmissionActivity[]
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  @@unique([schoolId, number])
+  @@unique([schoolId, academicYearId, classId, mobile, studentName])
+  @@index([schoolId, academicYearId, classId, status])
+  @@index([schoolId, nextFollowUpAt])
+}
+
+model AdmissionApplication {
+  academicYear AcademicYear @relation(fields: [academicYearId], references: [id], onDelete: Restrict)
+  schoolClass SchoolClass @relation(fields: [classId], references: [id], onDelete: Restrict)
+  section Section? @relation(fields: [sectionId], references: [id], onDelete: Restrict)
+  id String @id @default(uuid())
+  schoolId String
+  school School @relation(fields: [schoolId], references: [id], onDelete: Restrict)
+  number String
+  enquiryId String?
+  enquiry AdmissionEnquiry? @relation(fields: [enquiryId], references: [id], onDelete: Restrict)
+  academicYearId String
+  classId String
+  sectionId String?
+  studentName String
+  mobile String
+  formData Json
+  feePolicy Json
+  decision String @default("UNDER_REVIEW")
+  joiningStatus String @default("NOT_CONFIRMED")
+  offerDate DateTime?
+  joiningConfirmedAt DateTime?
+  joinedAt DateTime?
+  notJoinedReason String?
+  enrollmentId String? @unique
+  enrollment StudentEnrollment? @relation(fields: [enrollmentId], references: [id], onDelete: Restrict)
+  version Int @default(1)
+  payments AdmissionPayment[]
+  activities AdmissionActivity[]
+  documents AdmissionDocument[]
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  @@unique([schoolId, number])
+  @@unique([schoolId, enquiryId])
+  @@unique([schoolId, academicYearId, studentName, mobile])
+  @@index([schoolId, academicYearId, classId, decision, joiningStatus])
+}
+
+model AdmissionPayment {
+  id String @id @default(uuid())
+  schoolId String
+  school School @relation(fields: [schoolId], references: [id], onDelete: Restrict)
+  applicationId String
+  application AdmissionApplication @relation(fields: [applicationId], references: [id], onDelete: Restrict)
+  amountMinor Int
+  method String
+  reference String
+  receiptNumber String?
+  status String @default("PENDING")
+  recordedById String
+  verifiedById String?
+  verifiedAt DateTime?
+  reason String?
+  version Int @default(1)
+  createdAt DateTime @default(now())
+  @@unique([schoolId, method, reference])
+  @@unique([schoolId, receiptNumber])
+  @@index([schoolId, applicationId, status])
+}
+
+model AdmissionActivity {
+  id String @id @default(uuid())
+  schoolId String
+  school School @relation(fields: [schoolId], references: [id], onDelete: Restrict)
+  enquiryId String?
+  enquiry AdmissionEnquiry? @relation(fields: [enquiryId], references: [id], onDelete: Restrict)
+  applicationId String?
+  application AdmissionApplication? @relation(fields: [applicationId], references: [id], onDelete: Restrict)
+  actorId String
+  kind String
+  details Json
+  createdAt DateTime @default(now())
+  @@index([schoolId, enquiryId, createdAt])
+  @@index([schoolId, applicationId, createdAt])
+}
+
+model AdmissionDocument {
+  id String @id @default(uuid())
+  schoolId String
+  school School @relation(fields: [schoolId], references: [id], onDelete: Restrict)
+  applicationId String
+  application AdmissionApplication @relation(fields: [applicationId], references: [id], onDelete: Restrict)
+  name String
+  kind String
+  fileKey String
+  mimeType String
+  size Int
+  uploadedById String
+  createdAt DateTime @default(now())
+  @@index([schoolId, applicationId])
+}
+
+model EnrollmentMovement {
+  fromClass SchoolClass? @relation("MovementFromClass", fields: [fromClassId], references: [id], onDelete: Restrict)
+  toClass SchoolClass @relation("MovementToClass", fields: [toClassId], references: [id], onDelete: Restrict)
+  fromSection Section? @relation("MovementFromSection", fields: [fromSectionId], references: [id], onDelete: Restrict)
+  toSection Section? @relation("MovementToSection", fields: [toSectionId], references: [id], onDelete: Restrict)
+  id String @id @default(uuid())
+  schoolId String
+  school School @relation(fields: [schoolId], references: [id], onDelete: Restrict)
+  enrollmentId String
+  enrollment StudentEnrollment @relation(fields: [enrollmentId], references: [id], onDelete: Restrict)
+  kind String
+  fromClassId String?
+  fromSectionId String?
+  toClassId String
+  toSectionId String?
+  reason String
+  actorId String
+  createdAt DateTime @default(now())
+  @@index([schoolId, enrollmentId, createdAt])
 }
 
 model SchoolEvent {

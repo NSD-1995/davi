@@ -51,9 +51,9 @@ export class StudentsController {
   }
 
   @Post(':id/enrollments')
-  @RequirePermissions('STUDENT_UPDATE')
+  @RequirePermissions('STUDENT_UPDATE','ENROLLMENT_PROMOTE')
   enroll(@Req() req: any, @Param('id') id: string, @Body() dto: EnrollStudentDto) {
-    return this.studentsService.enroll(id, req.user.schoolId, dto);
+    return this.studentsService.enroll(id, req.user.schoolId, dto, req.user.id);
   }
 
   @Get(':id/enrollments')
@@ -63,8 +63,8 @@ export class StudentsController {
   }
 
   @Patch(':id/enrollments/:enrollmentId')
-  @RequirePermissions('STUDENT_UPDATE')
+  @RequirePermissions('STUDENT_UPDATE','ENROLLMENT_MOVE')
   updateEnrollment(@Req() req: any, @Param('id') id: string, @Param('enrollmentId') enrollmentId: string, @Body() dto: UpdateStudentEnrollmentDto) {
-    return this.studentsService.updateEnrollment(id, enrollmentId, req.user.schoolId, dto);
+    return this.studentsService.updateEnrollment(id, enrollmentId, req.user.schoolId, dto, req.user.id);
   }
 }

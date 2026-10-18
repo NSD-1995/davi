@@ -3,23 +3,29 @@ import * as bcrypt from 'bcryptjs';
 import { randomBytes } from 'crypto';
 import { accountCreationPassword } from '../auth/development-password';
 import { PrismaService } from '../prisma/prisma.service';
+import { admissionsTransaction } from './admissions-transaction';
 import { CreateStudentAdmissionDto } from './student-admissions.dto';
 
 @Injectable()
 export class StudentAdmissionsService {
   constructor(private readonly prisma: PrismaService) {}
-  async create(schoolId: string | null, data: CreateStudentAdmissionDto) {
+  async create(schoolId: string | null, data: CreateStudentAdmissionDto, transaction?: any) {
+    const db = transaction || this.prisma;
     if (!schoolId) throw new ForbiddenException('A school account is required.');
     if (!Array.isArray(data.parents) || data.parents.length < 1 || data.parents.length > 2) throw new BadRequestException('Provide one or two parents or guardians.');
     if (data.parents.filter((parent) => parent.isPrimary).length !== 1) throw new BadRequestException('Exactly one parent or guardian must be primary.');
     const admissionNumber = this.required(data.student?.admissionNumber, 'admissionNumber'); const { academicYearId, classId, sectionId } = data.enrollment ?? {};
-    if (await this.prisma.studentEnrollment.findFirst({ where: { schoolId, academicYearId, admissionNumber } })) throw new ConflictException('Admission number already exists for this academic year and school.');
-    const year = await this.prisma.academicYear.findFirst({ where: { id: academicYearId, schoolId } }); if (!year) throw new NotFoundException('Academic year not found for your school.');
-    const schoolClass = await this.prisma.schoolClass.findFirst({ where: { id: classId, schoolId, academicYearId } }); if (!schoolClass) throw new BadRequestException('Class must belong to the selected academic year.');
-    const section = sectionId ? await this.prisma.section.findFirst({ where: { id: sectionId, schoolId, classId } }) : null; if (sectionId && !section) throw new BadRequestException('Section must belong to the selected class.');
+    if (await db.studentEnrollment.findFirst({ where: { schoolId, academicYearId, admissionNumber } })) throw new ConflictException('Admission number already exists for this academic year and school.');
+    const year = await db.academicYear.findFirst({ where: { id: academicYearId, schoolId } }); if (!year) throw new NotFoundException('Academic year not found for your school.');
+    const schoolClass = await db.schoolClass.findFirst({ where: { id: classId, schoolId, academicYearId } }); if (!schoolClass) throw new BadRequestException('Class must belong to the selected academic year.');
+    const section = sectionId ? await db.section.findFirst({ where: { id: sectionId, schoolId, classId } }) : null; if (sectionId && !section) throw new BadRequestException('Section must belong to the selected class.');
     const parentInputs = data.parents.map((parent) => ({ ...parent, mobile: this.mobile(parent.mobile) })); if (new Set(parentInputs.map((parent) => parent.mobile)).size !== parentInputs.length) throw new BadRequestException('Each parent must have a different mobile number.');
     const temporaryPassword = accountCreationPassword(); const passwordHash = await bcrypt.hash(temporaryPassword, 10);
-    return this.prisma.$transaction(async (tx) => {
+    const execute = async (tx: any) => {
+      const policy = await tx.schoolSetting.findUnique({ where: { schoolId } });
+      if (policy?.admissionsPolicy?.requireSectionOnJoin && !sectionId) throw new BadRequestException('This school requires a section at joining.');
+      if (sectionId) { const current = await tx.section.findFirst({ where: { id: sectionId, schoolId, classId, status: 'ACTIVE' } }); if (!current || current.capacity === null) throw new BadRequestException('Choose an active section with configured capacity.'); await tx.section.update({where:{id:current.id},data:{capacity:current.capacity}}); const occupied = await tx.studentEnrollment.count({ where: { schoolId, academicYearId, sectionId, status: 'ACTIVE' } }); if (occupied >= current.capacity) throw new ConflictException('Section is full.'); }
+
       const studentUser = await tx.user.create({ data: { schoolId: null, username: `student-${schoolId}-${admissionNumber}-${randomBytes(3).toString('hex')}`, email: `student-${schoolId}-${admissionNumber}-${randomBytes(4).toString('hex')}@internal.davi.local`, passwordHash, firstName: this.required(data.student.firstName, 'student.firstName'), lastName: data.student.lastName?.trim() || '', mustChangePassword: false } });
       const student = await tx.student.create({ data: { userId: studentUser.id, studentCode: `STU-${randomBytes(8).toString('hex')}`, birthDate: data.student.dateOfBirth ? new Date(data.student.dateOfBirth) : null, gender: data.student.gender } });
       const enrollment = await tx.studentEnrollment.create({ data: { schoolId, studentId: student.id, academicYearId, classId, sectionId, admissionNumber, rollNumber: data.enrollment.rollNumber?.trim() || null }, include: { school: true, academicYear: true, schoolClass: true, section: true } });
@@ -36,7 +42,8 @@ export class StudentAdmissionsService {
         linkedParents.push({ id: parent.id, firstName: user.firstName, lastName: user.lastName, relationship: link.relationshipType, isPrimary: link.isPrimary, verificationRequired: membership.verificationStatus !== 'VERIFIED' });
       }
       return { student: { ...student, user: { id: studentUser.id, firstName: studentUser.firstName, lastName: studentUser.lastName } }, enrollment, class: schoolClass, section, parents: linkedParents, primaryParent: linkedParents.find((parent) => parent.isPrimary) };
-    });
+    };
+    return transaction ? execute(transaction) : admissionsTransaction(this.prisma, execute);
   }
   private async uniqueParentCode(tx: any, schoolId: string, mobile: string) { const base = `P-${mobile}`; if (!await tx.parentSchoolMembership.findFirst({ where: { schoolId, parentCode: base } })) return base; return `${base}-${randomBytes(2).toString('hex').toUpperCase()}`; }
   private required(value: string | undefined, field: string) { if (!value?.trim()) throw new BadRequestException(`${field} is required.`); return value.trim(); }

@@ -2,6 +2,7 @@ const { PrismaClient } = require('@prisma/client');
 const prisma = new PrismaClient();
 
 const codes = [
+  'ADMISSIONS_VIEW', 'ADMISSIONS_MANAGE', 'ADMISSIONS_DECIDE', 'ADMISSIONS_JOIN', 'ADMISSIONS_FEES_RECORD', 'ADMISSIONS_FEES_VERIFY', 'ADMISSIONS_SETTINGS_MANAGE', 'ENROLLMENT_ALLOCATE', 'ENROLLMENT_MOVE', 'ENROLLMENT_PROMOTE',
   'STAFF_CATEGORY_MANAGE',
   'staff.attendance.view',
   'staff.attendance.mark',
