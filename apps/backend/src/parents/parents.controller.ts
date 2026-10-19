@@ -56,6 +56,10 @@ export class ParentsController {
     return this.parentsService.onboard(req.user.schoolId, dto);
   }
 
+  @Post(':id/consent-verification')
+  @RequirePermissions('PARENT_UPDATE')
+  verifyConsent(@Req() req:any,@Param('id') id:string,@Body() body:unknown){return this.parentsService.verifyConsent(id,req.user.schoolId,req.user.id,body);}
+
   @Post(':id/students')
   @RequirePermissions('PARENT_UPDATE')
   linkStudent(@Req() req: any, @Param('id') id: string, @Body() dto: LinkParentStudentDto) {

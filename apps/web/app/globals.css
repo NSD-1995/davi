@@ -70,3 +70,7 @@
 .nav-child-icon{display:none}
 @media(max-width:1000px){.sidebar{visibility:hidden}.sidebar.open{visibility:visible}}
 @media(min-width:1001px){.sidebar-compact .academic-nav-children a{padding:11px}.sidebar-compact .advanced-link svg,.sidebar-compact .nav-child-icon{display:block}}
+
+.migration-steps{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px;margin-block:16px}.migration-steps .button{white-space:normal;text-align:left;min-height:44px}.migration-steps [aria-current="step"]{box-shadow:0 0 0 2px var(--teal)}
+@media(max-width:720px){.migration-steps{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media(max-width:380px){.migration-steps{grid-template-columns:1fr}}

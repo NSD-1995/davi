@@ -37,6 +37,7 @@ enum ParentStatus {
 }
 
 model School {
+  studentImportJobs StudentImportJob[]
   admissionEnquiries AdmissionEnquiry[]
   admissionApplications AdmissionApplication[]
   admissionPayments AdmissionPayment[]
@@ -199,6 +200,8 @@ model UserRole {
 }
 
 model SchoolSetting {
+  studentImportPolicy Json?
+  sectionCapacityPolicy Json?
   admissionsPolicy Json?
   id                String   @id @default(uuid())
   schoolId          String   @unique
@@ -220,6 +223,8 @@ model SchoolSetting {
 }
 
 model AcademicYear {
+  studentImportJobs StudentImportJob[]
+  @@unique([id, schoolId])
   admissionEnquiries AdmissionEnquiry[]
   admissionApplications AdmissionApplication[]
   id        String    @id @default(uuid())
@@ -462,6 +467,8 @@ model Student {
 }
 
 model StudentEnrollment {
+  address String?
+  admissionDate DateTime? @db.Date
   version Int @default(1)
   admissionApplication AdmissionApplication?
   movements EnrollmentMovement[]
@@ -1576,4 +1583,88 @@ model LeaveLedger {
  actor User? @relation(fields:[actorId],references:[id],onDelete:Restrict)
  @@unique([schoolId,dedupeKey])
  @@index([schoolId,balanceId,effectiveDate])
+}
+
+
+model StudentImportJob {
+  id String @id @default(uuid())
+  schoolId String
+  academicYearId String
+  actorId String
+  school School @relation(fields:[schoolId],references:[id],onDelete:Cascade)
+  academicYear AcademicYear @relation(fields:[academicYearId,schoolId],references:[id,schoolId],onDelete:Restrict)
+  idempotencyKey String
+  status String @default("UPLOADING")
+  revision Int @default(1)
+  mapping Json @default("{}")
+  options Json @default("{}")
+  summary Json @default("{}")
+  approvedById String?
+  decisionReason String?
+  leaseToken String?
+  leaseUntil DateTime?
+  error String?
+  inputTokens Int @default(0)
+  outputTokens Int @default(0)
+  costMinor Int @default(0)
+  retainUntil DateTime
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  files StudentImportFile[]
+  rows StudentImportRow[]
+  @@unique([schoolId,academicYearId,idempotencyKey])
+  @@unique([id,schoolId,academicYearId])
+  @@index([status,leaseUntil,createdAt])
+  @@index([schoolId,academicYearId,createdAt])
+}
+model StudentImportFile {
+  id String @id @default(uuid())
+  schoolId String
+  academicYearId String
+  jobId String
+  job StudentImportJob @relation(fields:[jobId,schoolId,academicYearId],references:[id,schoolId,academicYearId],onDelete:Cascade)
+  name String
+  fileKey String @unique
+  sha256 String
+  mimeType String
+  size Int
+  status String @default("QUARANTINED")
+  scanStatus String @default("PENDING")
+  scanMessage String?
+  pages Int @default(0)
+  error String?
+  deletedAt DateTime?
+  createdAt DateTime @default(now())
+  rows StudentImportRow[]
+  @@unique([id,schoolId,academicYearId])
+  @@unique([id,jobId,schoolId,academicYearId])
+  @@unique([jobId,sha256])
+  @@index([schoolId,jobId])
+}
+model StudentImportRow {
+  id String @id @default(uuid())
+  schoolId String
+  academicYearId String
+  jobId String
+  fileId String
+  job StudentImportJob @relation(fields:[jobId,schoolId,academicYearId],references:[id,schoolId,academicYearId],onDelete:Cascade)
+  file StudentImportFile @relation(fields:[fileId,jobId,schoolId,academicYearId],references:[id,jobId,schoolId,academicYearId],onDelete:Cascade)
+  sourceRef String
+  page Int
+  raw Json
+  values Json @default("{}")
+  evidence Json @default("{}")
+  issues Json @default("[]")
+  matches Json @default("[]")
+  action String @default("CREATE")
+  status String @default("EXTRACTED")
+  reviewed Boolean @default(false)
+  revision Int @default(1)
+  targetEnrollmentId String?
+  result Json?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  @@unique([jobId,fileId,sourceRef])
+  @@index([schoolId,academicYearId,jobId,status])
+  @@index([jobId,targetEnrollmentId])
 }

@@ -29,6 +29,10 @@ export class EnrollStudentDto {
 }
 
 export class UpdateStudentEnrollmentDto {
+  address?: string | null;
+  admissionDate?: string | null;
+  version?: number;
+  reason?: string;
   classId?: string;
   sectionId?: string | null;
   rollNumber?: string;

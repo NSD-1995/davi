@@ -18,7 +18,7 @@ export class ReplaceClassSubjectsDto {
 
 export class CreateClassesBulkDto {
   academicYearId!: string;
-  numberOfSections!: number;
+  numberOfSections?: number;
   sectionCapacity?: number;
   montessori?: boolean;
   prePrimary?: boolean;

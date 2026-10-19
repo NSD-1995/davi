@@ -23,6 +23,7 @@ export class AdmissionsCrmController {
   @Post('applications') @RequirePermissions('ADMISSIONS_MANAGE') createApplication(@Req() r: any, @Body() d: unknown) { return this.service.createApplication(r.user.schoolId, r.user.id, d); }
   @Post('applications/:id/amendment') @RequirePermissions('ADMISSIONS_MANAGE') amendApplication(@Req() r: any, @Param('id') id: string, @Body() d: unknown) { return this.service.amendApplication(r.user.schoolId, r.user.id, id, d); }
   @Post('applications/:id/decision') @RequirePermissions('ADMISSIONS_DECIDE') decision(@Req() r: any, @Param('id') id: string, @Body() d: unknown) { return this.service.decision(r.user.schoolId, r.user.id, id, d); }
+  @Post('applications/:id/confirm') @RequirePermissions('ADMISSIONS_JOIN') confirm(@Req() r:any,@Param('id') id:string,@Body() d:unknown){return this.service.confirmAdmission(r.user.schoolId,r.user.id,id,d);}
   @Post('applications/:id/joining') @RequirePermissions('ADMISSIONS_JOIN') join(@Req() r: any, @Param('id') id: string, @Body() d: unknown) { return this.service.join(r.user.schoolId, r.user.id, id, d); }
   @Post('applications/:id/payments') @RequirePermissions('ADMISSIONS_FEES_RECORD') payment(@Req() r: any, @Param('id') id: string, @Body() d: unknown) { return this.service.recordPayment(r.user.schoolId, r.user.id, id, d); }
   @Post('payments/:id/verification') @RequirePermissions('ADMISSIONS_FEES_VERIFY') verify(@Req() r: any, @Param('id') id: string, @Body() d: unknown) { return this.service.verifyPayment(r.user.schoolId, r.user.id, id, d); }

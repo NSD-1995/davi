@@ -128,3 +128,90 @@ test('PostgreSQL concurrent joining and last-seat assignment never double-enroll
   const results=await Promise.allSettled(enrollments.map(row=>allocation.move(school.id,actor.id,{assignments:[{enrollmentId:row.id,version:row.version,sectionId:sections[0].id}],reason:'Assign last available seat'})));
   assert.equal(results.filter(row=>row.status==='fulfilled').length,1,JSON.stringify({results,rows:await db.studentEnrollment.findMany({where:{schoolId:school.id},select:{id:true,sectionId:true,version:true}})}));assert.equal(await db.studentEnrollment.count({where:{schoolId:school.id,sectionId:sections[0].id,status:'ACTIVE'}}),1);
 }));
+
+test('PostgreSQL capacity policy, waitlist, approved partial allocation and concurrent final seat',{skip:process.env.ADMISSIONS_DB_TEST!=='1'},async()=>fixture(async f=>{
+ const {db,school,year,schoolClass,sections,actor,allocation,crm,application}=f;
+ const entries=[];
+ for(let i=0;i<3;i++){
+  const app=await crm.createApplication(school.id,actor.id,application('Capacity'+i));
+  const approved=await crm.decision(school.id,actor.id,app.id,{version:1,decision:'APPROVED',reason:'Fixture application reviewed'});
+  const joined=await crm.join(school.id,actor.id,app.id,{version:approved.version,status:'JOINED',admissionNumber:'CAP-'+i,joinedAt:'2026-10-19',reason:'Fixture joining confirmed',sectionId:null});
+  entries.push(await db.studentEnrollment.findUnique({where:{id:joined.enrollmentId}}));
+ }
+ await allocation.saveCapacityPolicy(school.id,actor.id,{expectedPolicy:'{}',reason:'Fixture capacity policy',policy:{defaultCapacity:1,preference:'BALANCED_COUNT',nearFullPercent:90,rules:[],constraints:[]}});
+ const plan={academicYearId:year.id,classId:schoolClass.id,sections:sections.map(s=>({id:s.id,key:s.id,name:s.name,capacity:1}))};
+ const preview=await allocation.preview(school.id,plan);
+ assert.equal(preview.assignments.length,2);assert.equal(preview.waitlist.length,1);
+ await allocation.confirm(school.id,actor.id,{...plan,sections:preview.sections,expectedPolicy:preview.expectedPolicy,assignments:preview.assignments,waitlist:preview.waitlist,reason:'Approve available placements',confirmCreateSections:false});
+ assert.equal((await allocation.list(school.id,{academicYearId:year.id,classId:schoolClass.id})).unassigned.length,1);
+ assert.equal(await db.auditLog.count({where:{schoolId:school.id,action:'SECTION_ALLOCATION_APPROVED'}}),1);
+ const placed=await db.studentEnrollment.findMany({where:{schoolId:school.id,sectionId:{not:null}}});
+ await db.studentEnrollment.updateMany({where:{id:{in:placed.map(e=>e.id)}},data:{sectionId:null,version:{increment:1}}});
+ const current=await db.studentEnrollment.findMany({where:{schoolId:school.id},orderBy:{id:'asc'}});
+ const results=await Promise.allSettled(current.slice(0,2).map(e=>allocation.move(school.id,actor.id,{assignments:[{enrollmentId:e.id,version:e.version,sectionId:sections[0].id}],reason:'Competing final seat'})));
+ assert.equal(results.filter(r=>r.status==='fulfilled').length,1);
+ assert.equal(await db.studentEnrollment.count({where:{schoolId:school.id,sectionId:sections[0].id,status:'ACTIVE'}}),1);
+ await assert.rejects(allocation.saveCapacityPolicy(school.id,actor.id,{expectedPolicy:'{}',reason:'Stale policy attempt',policy:{defaultCapacity:2}}),/Policy changed/);
+}));
+
+test('PostgreSQL uploaded students enroll directly without enquiries and retries do not duplicate',{skip:process.env.ADMISSIONS_DB_TEST!=='1'},async()=>fixture(async f=>{
+ const {db,school,year,schoolClass,actor,allocation,crm,application}=f;
+ const {StudentIntakeService}=require('../dist/student-admissions/student-intake.service');
+ const intake=new StudentIntakeService(db,crm,allocation,new StudentAdmissionsService(db));
+ await db.section.deleteMany({where:{schoolId:school.id}});
+ await db.schoolClass.update({where:{id:schoolClass.id},data:{academicGroup:'PRIMARY'}});
+ await allocation.saveCapacityPolicy(school.id,actor.id,{expectedPolicy:'{}',reason:'Set group norm for intake',policy:{autoAssignOnJoin:true,rules:[{academicYearId:year.id,level:'ACADEMIC_LEVEL',target:'PRIMARY',maximum:2,reserved:0}]}});
+ await db.school.update({where:{id:school.id},data:{shortName:'INTAKE'}});
+ const rows=Array.from({length:5},(_,i)=>({firstName:'Imported'+i,lastName:'Fixture',className:schoolClass.name,parentName:'Upload Parent',mobile:f.mobile}));
+ const input={academicYearId:year.id,rows};
+ const preview=await intake.preview(school.id,input);assert.deepEqual(preview.errors,[]);assert.equal(preview.groups[0].sections.length,3);assert.deepEqual(preview.groups[0].distribution.map(s=>s.proposedTotal),[2,2,1]);
+ assert.equal(await db.section.count({where:{schoolId:school.id}}),0);assert.equal(await db.admissionApplication.count({where:{schoolId:school.id}}),0);
+ await assert.rejects(intake.confirm(school.id,actor.id,{...input,expectedPreview:preview.expectedPreview,reason:'Approve uploaded intake',approveSections:false}),/Approve/);
+ await assert.rejects(intake.confirm(school.id,actor.id,{...input,expectedPreview:'0'.repeat(64),reason:'Stale intake',approveSections:true}),/fresh preview/);
+ const imported=await intake.confirm(school.id,actor.id,{...input,expectedPreview:preview.expectedPreview,reason:'Approve uploaded intake',approveSections:true});assert.equal(imported.students,5);assert.equal(imported.newSections,3);
+ assert.equal(await db.studentEnrollment.count({where:{schoolId:school.id}}),5);
+ assert.equal(await db.admissionEnquiry.count({where:{schoolId:school.id}}),0);
+ assert.equal(await db.admissionApplication.count({where:{schoolId:school.id}}),0);
+ const replay=await intake.confirm(school.id,actor.id,{...input,expectedPreview:preview.expectedPreview,reason:'Repeated upload',approveSections:true});assert.equal(replay.reused,true);assert.equal(await db.studentEnrollment.count({where:{schoolId:school.id}}),5);
+ const before=await db.studentEnrollment.findMany({where:{schoolId:school.id},select:{id:true,sectionId:true}});
+ const pair=[];for(let i=0;i<2;i++){const app=await crm.createApplication(school.id,actor.id,application('FinalAuto'+i));pair.push(await crm.decision(school.id,actor.id,app.id,{version:1,decision:'APPROVED',reason:'Reviewed final seat application'}));}
+ const join=(app,i)=>crm.join(school.id,actor.id,app.id,{version:app.version,status:'JOINED',admissionNumber:'AUTO-LAST-'+i,joinedAt:'2026-10-19',sectionId:null,reason:'Concurrent automatic allocation'});
+ const results=await Promise.allSettled(pair.map(join));
+ for(let i=0;i<results.length;i++)if(results[i].status==='rejected')await join(await db.admissionApplication.findUnique({where:{id:pair[i].id}}),i);
+ assert.equal(await db.studentEnrollment.count({where:{schoolId:school.id,sectionId:{not:null}}}),6);
+ assert.equal(await db.studentEnrollment.count({where:{schoolId:school.id,sectionId:null}}),1);
+ for(const e of before)assert.equal((await db.studentEnrollment.findUnique({where:{id:e.id}})).sectionId,e.sectionId);
+ assert.equal(await db.auditLog.count({where:{schoolId:school.id,action:'STUDENT_PLACEMENT_WAITLISTED'}}),1);
+ const bad=await intake.preview(school.id,{academicYearId:year.id,rows:[{...rows[0],firstName:'Unknown',className:'Not a class'}]});assert.equal(bad.errors.length,1);
+ await assert.rejects(intake.preview('another-school',input),/academic year/);
+}));
+
+test('PostgreSQL enquiry converts to enrollment with one admission confirmation and no prior decision',{skip:process.env.ADMISSIONS_DB_TEST!=='1'},async()=>fixture(async f=>{
+ await f.db.school.update({where:{id:f.school.id},data:{shortName:'DAVI'}});
+ await f.crm.saveSettings(f.school.id,f.actor.id,{requireSectionOnJoin:false,formTitle:'Admissions',formDescription:'',extraFields:[],requiredDocuments:['Birth certificate'],fees:[]});
+ const enquiry=await f.crm.createEnquiry(f.school.id,f.actor.id,{academicYearId:f.year.id,classId:f.schoolClass.id,studentName:'New Fixture',parentName:'Parent Fixture',mobile:f.mobile,source:'WALK_IN',remarks:'Ready for admission'});
+ const app=await f.crm.createApplication(f.school.id,f.actor.id,f.application('New',enquiry.id));assert.equal(app.decision,'UNDER_REVIEW');
+ const request={version:app.version,joinedAt:new Date().toISOString().slice(0,10),sectionId:f.sections[0].id,reason:'Confirm admission from registered enquiry'};
+ await assert.rejects(f.crm.confirmAdmission(f.school.id,f.actor.id,app.id,request),/Upload Birth certificate/);assert.equal(await f.db.studentEnrollment.count({where:{schoolId:f.school.id}}),0);assert.equal((await f.crm.application(f.school.id,app.id)).decision,'UNDER_REVIEW');
+ await f.crm.saveSettings(f.school.id,f.actor.id,{requireSectionOnJoin:false,formTitle:'Admissions',formDescription:'',extraFields:[],requiredDocuments:[],fees:[]});
+ const attempts=await Promise.allSettled([f.crm.confirmAdmission(f.school.id,f.actor.id,app.id,request),f.crm.confirmAdmission(f.school.id,f.actor.id,app.id,request)]);assert.equal(attempts.filter(a=>a.status==='fulfilled').length,1);assert.equal(await f.db.studentEnrollment.count({where:{schoolId:f.school.id}}),1);
+ const enrollment=await f.db.studentEnrollment.findFirst({where:{schoolId:f.school.id}});assert.equal(enrollment.admissionNumber,'DAVI-000001');assert.equal((await f.crm.enquiry(f.school.id,enquiry.id)).status,'CONVERTED');assert.equal((await f.crm.list(f.school.id,'applications',{academicYearId:f.year.id,admissionState:'ADMITTED'})).total,1);assert.equal((await f.crm.list(f.school.id,'applications',{academicYearId:f.year.id,admissionState:'PENDING'})).total,0);
+}));
+
+test('PostgreSQL section roll generation is scoped, previewed, audited and rejects stale concurrent saves',{skip:process.env.ADMISSIONS_DB_TEST!=='1'},async()=>fixture(async f=>{
+ const {SectionsService}=require('../dist/sections/sections.service');const service=new SectionsService(f.db),admissions=new StudentAdmissionsService(f.db);await f.db.section.update({where:{id:f.sections[0].id},data:{capacity:10}});
+ const enrollments=[];for(const [i,name]of ['Zara','Alice','Ben'].entries()){const result=await admissions.create(f.school.id,{student:{firstName:name,lastName:'Fixture',admissionNumber:'ROLL-'+i},enrollment:{academicYearId:f.year.id,classId:f.schoolClass.id,sectionId:f.sections[0].id},parents:[{firstName:'Parent',mobile:f.mobile,isPrimary:true}]});enrollments.push(result.enrollment);}
+ await f.db.studentEnrollment.updateMany({where:{id:{in:enrollments.map(e=>e.id)}},data:{rollNumber:null}});await f.db.studentEnrollment.update({where:{id:enrollments[0].id},data:{rollNumber:'7'}});
+ const request={academicYearId:f.year.id};const plan=await service.rollNumbers(f.school.id,f.actor.id,f.sections[0].id,request);assert.equal(plan.changed,2);assert.deepEqual(plan.rows.map(r=>r.proposed),['8','9','7']);assert.equal((await f.db.studentEnrollment.findUnique({where:{id:enrollments[1].id}})).rollNumber,null);
+ await assert.rejects(service.rollNumbers(f.school.id,f.actor.id,f.sections[0].id,{academicYearId:f.nextYear.id}),/not found/);await assert.rejects(service.rollNumbers('other-school',f.actor.id,f.sections[0].id,request),/permission/);
+ const saves=await Promise.allSettled([1,2].map(()=>service.rollNumbers(f.school.id,f.actor.id,f.sections[0].id,{...request,expectedPreview:plan.expectedPreview},true)));assert.equal(saves.filter(r=>r.status==='fulfilled').length,1);assert.equal(await f.db.auditLog.count({where:{schoolId:f.school.id,action:'SECTION_ROLL_NUMBERS_GENERATED'}}),1);assert.equal((await service.rollNumbers(f.school.id,f.actor.id,f.sections[0].id,request)).changed,0);assert.equal((await f.db.studentEnrollment.findUnique({where:{id:enrollments[0].id}})).rollNumber,'7');
+}));
+
+test('PostgreSQL registration and section assignment save automatic or manual rolls and reject duplicates',{skip:process.env.ADMISSIONS_DB_TEST!=='1'},async()=>fixture(async f=>{
+ const admissions=new StudentAdmissionsService(f.db);for(const section of f.sections)await f.db.section.update({where:{id:section.id},data:{capacity:10}});
+ const create=(name,sectionId,rollNumber)=>admissions.create(f.school.id,{student:{firstName:name,lastName:'Fixture',admissionNumber:'ASSIGN-'+name},enrollment:{academicYearId:f.year.id,classId:f.schoolClass.id,sectionId,rollNumber},parents:[{firstName:'Parent',mobile:f.mobile,isPrimary:true}]});
+ const a=await create('Alice',f.sections[0].id,'5');assert.equal(a.enrollment.rollNumber,'5');const b=await create('Ben',f.sections[0].id);assert.equal(b.enrollment.rollNumber,'6');await assert.rejects(create('Duplicate',f.sections[0].id,'05'),/already exists/);assert.equal(await f.db.studentEnrollment.count({where:{schoolId:f.school.id}}),2);
+ const c=await create('Cara');assert.equal(c.enrollment.rollNumber,null);await f.allocation.move(f.school.id,f.actor.id,{assignments:[{enrollmentId:c.enrollment.id,version:c.enrollment.version,classId:f.schoolClass.id,sectionId:f.sections[0].id}],reason:'Assign section with automatic roll'});let current=await f.db.studentEnrollment.findUnique({where:{id:c.enrollment.id}});assert.equal(current.rollNumber,'7');
+ await f.allocation.move(f.school.id,f.actor.id,{assignments:[{enrollmentId:current.id,version:current.version,classId:f.schoolClass.id,sectionId:f.sections[1].id,rollNumber:'12'}],reason:'Transfer and set reviewed roll'});current=await f.db.studentEnrollment.findUnique({where:{id:c.enrollment.id}});assert.equal(current.rollNumber,'12');
+ await assert.rejects(f.allocation.move(f.school.id,f.actor.id,{assignments:[{enrollmentId:current.id,version:current.version,classId:f.schoolClass.id,sectionId:f.sections[0].id,rollNumber:'6'}],reason:'Reject duplicate roll on transfer'}),/already exists/);assert.equal((await f.db.studentEnrollment.findUnique({where:{id:c.enrollment.id}})).sectionId,f.sections[1].id);
+}));

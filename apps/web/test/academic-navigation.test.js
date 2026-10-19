@@ -11,8 +11,8 @@ const { academicNavigation, visibleAcademicNavigation, matchesAcademicRoute } = 
 test('existing destinations and teaching staff remain reachable in four groups', () => {
   assert.deepEqual(academicNavigation.map(group => group.label), ['Academic Setup', 'Class Workspace', 'Timetables', 'Academic Planning']);
   const routes = academicNavigation.flatMap(group => group.links.map(link => link.href));
-  assert.equal(new Set(routes).size, 11);
-  assert.deepEqual(routes.slice().sort(), ['workspace', 'academic-planner', 'ai-lesson-plans', 'timetables', 'timetable-settings', 'period-templates', 'academic-years', 'classes', 'groups', 'subjects'].map(route => '/academics/' + route).concat('/people/teachers').sort());
+  assert.equal(new Set(routes).size, 12);
+  assert.deepEqual(routes.slice().sort(), ['workspace', 'academic-planner', 'ai-lesson-plans', 'timetables', 'timetable-settings', 'period-templates', 'academic-years', 'classes', 'section-capacity', 'groups', 'subjects'].map(route => '/academics/' + route).concat('/people/teachers').sort());
 });
 test('permissions hide empty groups and independently filter advanced features', () => {
   assert.deepEqual(visibleAcademicNavigation(() => false), []);

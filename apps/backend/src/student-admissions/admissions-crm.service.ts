@@ -16,7 +16,7 @@ export class AdmissionsCrmService {
   async legacyJoin(schoolId: string | null, actorId: string, data: any) {
     const application = await this.createApplication(schoolId, actorId, { academicYearId: data.enrollment?.academicYearId, classId: data.enrollment?.classId, sectionId: data.enrollment?.sectionId || null, student: { firstName: data.student?.firstName, lastName: data.student?.lastName || '', ...(data.student?.dateOfBirth ? { dateOfBirth: data.student.dateOfBirth } : {}), ...(data.student?.gender ? { gender: data.student.gender } : {}) }, parents: data.parents });
     const approved = await this.decision(schoolId, actorId, application.id, { version: application.version, decision: 'APPROVED', reason: 'Authorized direct admission and joining request.' });
-    const joined = await this.join(schoolId, actorId, application.id, { version: approved.version, status: 'JOINED', admissionNumber: data.student?.admissionNumber, joinedAt: new Date().toISOString().slice(0,10), sectionId: data.enrollment?.sectionId || null, reason: 'Authorized direct admission and joining request.' });
+    const joined = await this.join(schoolId, actorId, application.id, { version: approved.version, status: 'JOINED', admissionNumber: data.student?.admissionNumber,rollNumber:data.enrollment?.rollNumber, joinedAt: new Date().toISOString().slice(0,10), sectionId: data.enrollment?.sectionId || null, reason: 'Authorized direct admission and joining request.' });
     const enrollment = await this.db.studentEnrollment.findUnique({ where: { id: joined.enrollmentId }, include: { student: { include: { user: { select: { id: true, firstName: true, lastName: true } } } }, schoolClass: true, section: true } });
     return { application: joined, enrollment, student: enrollment?.student, class: enrollment?.schoolClass, section: enrollment?.section };
   }
@@ -40,18 +40,19 @@ export class AdmissionsCrmService {
   }
   async lookups(schoolId: string | null) {
     this.school(schoolId);
-    const [school, years, classes, staff, settings] = await Promise.all([
+    const [school, years, classes, staff, settings, capacitySettings] = await Promise.all([
       this.db.school.findUnique({ where: { id: schoolId }, select: { name: true, shortName: true } }),
       this.db.academicYear.findMany({ where: { schoolId }, orderBy: { createdAt: 'desc' } }),
       this.db.schoolClass.findMany({ where: { schoolId }, include: { sections: true }, orderBy: { createdAt: 'asc' } }),
-      this.db.staff.findMany({ where: { schoolId, status: 'ACTIVE' }, select: { id: true, user: { select: { firstName: true, lastName: true } } } }), this.settings(schoolId),
-    ]); return { school, years, classes, staff, settings };
+      this.db.staff.findMany({ where: { schoolId, status: 'ACTIVE' }, select: { id: true, user: { select: { firstName: true, lastName: true } } } }), this.settings(schoolId), this.db.schoolSetting.findUnique({where:{schoolId},select:{sectionCapacityPolicy:true}}),
+    ]); return { school, years, classes, staff, settings, autoAssignSections:Boolean((capacitySettings?.sectionCapacityPolicy as any)?.autoAssignOnJoin) };
   }
   async list(schoolId: string | null, kind: 'enquiries' | 'applications', query: any) {
     this.school(schoolId);
-    const q = parse(z.object({ academicYearId: id.optional(), classId: id.optional(), status: text.optional(), joiningStatus: text.optional(), search: z.string().max(200).optional(), due: z.enum(['pending','overdue']).optional(), page: z.coerce.number().int().min(1).max(100000).default(1), pageSize: z.coerce.number().int().min(1).max(100).default(25) }).strict(), query);
+    const q = parse(z.object({ academicYearId: id.optional(), classId: id.optional(), status: text.optional(), joiningStatus: text.optional(),admissionState:z.enum(['PENDING','ADMITTED']).optional(), search: z.string().max(200).optional(), due: z.enum(['pending','overdue']).optional(), page: z.coerce.number().int().min(1).max(100000).default(1), pageSize: z.coerce.number().int().min(1).max(100).default(25) }).strict(), query);
     const where: any = { schoolId, ...(q.academicYearId ? { academicYearId: q.academicYearId } : {}), ...(q.classId ? { classId: q.classId } : {}) };
     if (q.status) where[kind === 'enquiries' ? 'status' : 'decision'] = q.status;
+    if(q.admissionState&&kind==='applications')where.enrollmentId=q.admissionState==='ADMITTED'?{not:null}:null;
     if (q.joiningStatus && kind === 'applications') where.joiningStatus = q.joiningStatus;
     if (q.search) where.OR = ['number','studentName','mobile'].map(field => ({ [field]: { contains: q.search, mode: 'insensitive' } }));
     if (q.due && kind === 'enquiries') { where.AND = [{status:{ notIn: ['CONVERTED','CLOSED','NOT_INTERESTED'] }}]; where.nextFollowUpAt = q.due === 'overdue' ? { lt: new Date() } : { not: null }; }
@@ -62,15 +63,16 @@ export class AdmissionsCrmService {
   async enquiry(schoolId: string, enquiryId: string, db: any = this.db) { const row = await db.admissionEnquiry.findFirst({ where: { id: enquiryId, schoolId }, include: { activities: { orderBy: { createdAt: 'desc' } }, applications: { select: { id: true, number: true, decision: true, joiningStatus: true } } } }); if (!row) throw new NotFoundException('Enquiry not found.'); return row; }
   async application(schoolId: string, applicationId: string, db: any = this.db) { const row = await db.admissionApplication.findFirst({ where: { id: applicationId, schoolId }, include: { payments: { orderBy: { createdAt: 'desc' } }, activities: { orderBy: { createdAt: 'desc' } }, documents: { select: documentSelect }, enrollment: true } }); if (!row) throw new NotFoundException('Application not found.'); return row; }
   async detail(schoolId: string | null, kind: 'enquiries' | 'applications', recordId: string) { this.school(schoolId); return kind === 'enquiries' ? this.enquiry(schoolId, recordId) : this.application(schoolId, recordId); }
-  async createEnquiry(schoolId: string | null, actorId: string, body: unknown) {
+  async createEnquiry(schoolId: string | null, actorId: string, body: unknown, transaction?: any) {
     this.school(schoolId); const input = parse(enquirySchema, body); const data = { ...input, studentName: contactName(input.studentName) };
-    return admissionsTransaction(this.db, async tx => {
+    const execute = async (tx:any) => {
       await this.scope(tx, schoolId, data.academicYearId, data.classId); await this.staff(tx, schoolId, data.assignedStaffId);
       const existing = await tx.admissionEnquiry.findFirst({ where: { schoolId, academicYearId: data.academicYearId, classId: data.classId, mobile: data.mobile, studentName: { equals: data.studentName, mode: 'insensitive' } } });
       if (existing) { await this.activity(tx, schoolId, actorId, 'REPEAT_ENQUIRY', data, { enquiryId: existing.id }); return { ...existing, duplicate: true }; }
       const row = await tx.admissionEnquiry.create({ data: { ...data, email: data.email || null, schoolId, number: number('ENQ'), enquiryDate: data.enquiryDate ? new Date(data.enquiryDate) : new Date(), nextFollowUpAt: data.nextFollowUpAt ? new Date(data.nextFollowUpAt) : null } });
       await this.activity(tx, schoolId, actorId, 'ENQUIRY_CREATED', data, { enquiryId: row.id }); return row;
-    });
+    };
+    return transaction ? execute(transaction) : admissionsTransaction(this.db,execute);
   }
   async followup(schoolId: string | null, actorId: string, enquiryId: string, body: unknown) {
     this.school(schoolId); const data = parse(followupSchema, body);
@@ -85,9 +87,9 @@ export class AdmissionsCrmService {
       await this.activity(tx, schoolId, actorId, 'FOLLOW_UP', data, { enquiryId }); return row;
     });
   }
-  async createApplication(schoolId: string | null, actorId: string, body: unknown) {
+  async createApplication(schoolId: string | null, actorId: string, body: unknown, transaction?: any) {
     this.school(schoolId); const data = parse(applicationSchema, body);
-    return admissionsTransaction(this.db, async tx => {
+    const execute = async (tx:any) => {
       await this.scope(tx, schoolId, data.academicYearId, data.classId, data.sectionId);
       const settings = await this.settings(schoolId, tx);
       for (const field of settings.extraFields) if (field.required && !data.extraFields[field.key]?.trim()) throw new BadRequestException(`${field.label} is required.`);
@@ -98,7 +100,8 @@ export class AdmissionsCrmService {
       const row = await tx.admissionApplication.create({ data: { schoolId, number: number('APP'), enquiryId: data.enquiryId, academicYearId: data.academicYearId, classId: data.classId, sectionId: data.sectionId || null, studentName: contactName(data.student.firstName + ' ' + data.student.lastName), mobile: primary.mobile, formData: data, feePolicy } });
       if (data.enquiryId) await tx.admissionEnquiry.update({ where: { id: data.enquiryId }, data: { status: 'APPLICATION_STARTED', version: { increment: 1 } } });
       await this.activity(tx, schoolId, actorId, 'APPLICATION_CREATED', { number: row.number }, { applicationId: row.id, enquiryId: data.enquiryId }); return row;
-    });
+    };
+    return transaction ? execute(transaction) : admissionsTransaction(this.db,execute);
   }
   async decision(schoolId: string | null, actorId: string, applicationId: string, body: unknown) {
     this.school(schoolId); const data = parse(z.object({ version: z.number().int().positive(), decision: z.enum(['UNDER_REVIEW','APPROVED','REJECTED','WAITLISTED','WITHDRAWN']), reason }).strict(), body);
@@ -123,31 +126,39 @@ export class AdmissionsCrmService {
       await this.activity(tx,schoolId,actorId,'APPLICATION_AMENDED',{before:before.formData,after:data},{applicationId});return row;
     });
   }
-  async join(schoolId: string | null, actorId: string, applicationId: string, body: unknown) {
-    this.school(schoolId); const data = parse(z.object({ version: z.number().int().positive(), status: z.enum(['JOINED','NOT_JOINED']), admissionNumber: text.optional(), sectionId: id.nullable().optional(), joinedAt: z.string().date().optional(), reason }).strict(), body);
+  async confirmAdmission(schoolId:string|null,actorId:string,applicationId:string,body:unknown){
+    const data=parse(z.object({version:z.number().int().positive(),admissionNumber:z.string().trim().max(200).optional(),sectionId:id.nullable().optional(),rollNumber:z.string().trim().max(100).optional(),joinedAt:z.string().date(),reason}).strict(),body);
+    return this.join(schoolId,actorId,applicationId,{...data,status:'JOINED'},true);
+  }
+  async join(schoolId: string | null, actorId: string, applicationId: string, body: unknown, confirmAdmission=false) {
+    this.school(schoolId); const data = parse(z.object({ version: z.number().int().positive(), status: z.enum(['JOINED','NOT_JOINED']), admissionNumber: z.string().trim().max(200).optional(), sectionId: id.nullable().optional(),rollNumber:z.string().trim().max(100).optional(), joinedAt: z.string().date().optional(), reason }).strict(), body);
     return admissionsTransaction(this.db, async tx => {
       const before = await this.application(schoolId, applicationId, tx); checkVersion(before.version, data.version);
-      if (before.enrollmentId) throw new ConflictException('Joining has already created an enrollment.');
-      if (before.decision !== 'APPROVED') throw new BadRequestException('Only an approved application can enter the joining workflow.');
+      if (before.enrollmentId) throw new ConflictException('This admission already has an enrollment.');
+      if(confirmAdmission&&before.enquiryId){const enquiry=await this.enquiry(schoolId,before.enquiryId,tx);if(enquiry.status==='CONVERTED')throw new ConflictException('This enquiry has already converted to an admission.');}
+      if(confirmAdmission&&['REJECTED','WITHDRAWN'].includes(before.decision))throw new BadRequestException('Amend the admission details before confirming a rejected or withdrawn record.');
+      if (!confirmAdmission && before.decision !== 'APPROVED') throw new BadRequestException('Only an approved application can enter the joining workflow.');
       let enrollmentId: string | undefined;
+      let assignedSectionId: string | null = data.sectionId === undefined ? before.sectionId : data.sectionId;
       if (data.status === 'JOINED') {
-        if (!data.admissionNumber || !data.joinedAt) throw new BadRequestException('Admission number and actual joining date are required.');
+        if (!data.joinedAt) throw new BadRequestException('Actual joining date is required.');
         if (new Date(data.joinedAt) > new Date()) throw new BadRequestException('Actual joining date cannot be in the future.');
         const sectionId = data.sectionId === undefined ? before.sectionId : data.sectionId;
         const primary = before.formData.parents.find((parent: any) => parent.isPrimary);
         const existingStudent = await tx.student.findFirst({ where: { enrollments: { some: { schoolId } }, user: { firstName: { equals: before.formData.student.firstName, mode: 'insensitive' }, lastName: { equals: before.formData.student.lastName || '', mode: 'insensitive' } }, studentParents: { some: { parent: { user: { phone: primary.mobile } } } }, ...(before.formData.student.dateOfBirth ? { birthDate: new Date(before.formData.student.dateOfBirth) } : {}) } });
         if (existingStudent) throw new ConflictException('This student already has a profile in this school. Use Student Directory and Promotions rather than creating a duplicate.');
         const settings = await this.settings(schoolId, tx);
-        if (settings.requireSectionOnJoin && !sectionId) throw new BadRequestException('This school requires a section at joining.');
+
         for (const kind of settings.requiredDocuments) if (!before.documents.some((document: any) => document.kind === kind)) throw new BadRequestException(`Upload ${kind} before joining.`);
         const paid = before.payments.filter((payment: any) => ['VERIFIED','WAIVED'].includes(payment.status)).reduce((total: number, payment: any) => total + payment.amountMinor, 0);
         if (before.feePolicy.mandatory && paid < before.feePolicy.amountMinor) throw new BadRequestException('Verify the mandatory application fee or an eligible waiver before joining.');
-        const result = await this.admissions.create(schoolId, { student: { ...before.formData.student, admissionNumber: data.admissionNumber }, enrollment: { academicYearId: before.academicYearId, classId: before.classId, sectionId: sectionId || undefined }, parents: before.formData.parents }, tx);
+        const result = await this.admissions.create(schoolId, { student: { ...before.formData.student, admissionNumber: data.admissionNumber || before.formData.student.admissionNumber }, enrollment: { address:before.formData.student.address,academicYearId: before.academicYearId, classId: before.classId, sectionId: sectionId || undefined,rollNumber:data.rollNumber }, parents: before.formData.parents }, tx, actorId);
         enrollmentId = result.enrollment.id;
+        assignedSectionId = result.enrollment.sectionId;
       }
-      const row = await tx.admissionApplication.update({ where: { id: applicationId }, data: { joiningStatus: data.status, joiningConfirmedAt: new Date(), joinedAt: data.status === 'JOINED' ? new Date(data.joinedAt!) : null, notJoinedReason: data.status === 'NOT_JOINED' ? data.reason : null, enrollmentId, sectionId: data.sectionId === undefined ? before.sectionId : data.sectionId, version: { increment: 1 } } });
+      const row = await tx.admissionApplication.update({ where: { id: applicationId }, data: { ...(confirmAdmission?{decision:'APPROVED',offerDate:before.offerDate||new Date()}:{}),joiningStatus: data.status, joiningConfirmedAt: new Date(), joinedAt: data.status === 'JOINED' ? new Date(data.joinedAt!) : null, notJoinedReason: data.status === 'NOT_JOINED' ? data.reason : null, enrollmentId, sectionId: assignedSectionId, version: { increment: 1 } } });
       if (before.enquiryId && data.status === 'JOINED') await tx.admissionEnquiry.update({ where: { id: before.enquiryId }, data: { status: 'CONVERTED', nextFollowUpAt: null, version: { increment: 1 } } });
-      await this.activity(tx, schoolId, actorId, 'JOINING', data, { applicationId, enquiryId: before.enquiryId || undefined }); return row;
+      await this.activity(tx, schoolId, actorId, confirmAdmission?'ADMISSION_CONFIRMED':'JOINING', data, { applicationId, enquiryId: before.enquiryId || undefined }); return row;
     });
   }
   async recordPayment(schoolId: string | null, actorId: string, applicationId: string, body: unknown) {

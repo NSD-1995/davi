@@ -8,6 +8,7 @@ const codes = [
   'staff.attendance.mark',
   'staff.attendance.override',
   'staff.attendance.manage',
+  'students.import.view', 'students.import.manage', 'students.import.commit', 'students.import.rollback',
   'staff.attendance.policy.manage',
   'staff.leave.policy.manage',
   'staff.leave.request',

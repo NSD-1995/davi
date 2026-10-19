@@ -18,5 +18,16 @@ services:
     ports:
       - "6379:6379"
 
+  clamav:
+    profiles: ["student-migration"]
+    image: ${CLAMAV_IMAGE:-clamav/clamav:stable_base}
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:3310:3310"
+    volumes:
+      - clamav_signatures:/var/lib/clamav
+    mem_limit: 4g
+
 volumes:
+  clamav_signatures:
   postgres_data:

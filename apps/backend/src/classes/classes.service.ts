@@ -104,9 +104,8 @@ export class SchoolClassesService {
 
   async createBulk(schoolId: string | null, data: CreateClassesBulkDto) {
     this.requireSchoolId(schoolId);
-    if (!Number.isInteger(data.numberOfSections) || data.numberOfSections < 1) {
-      throw new BadRequestException('numberOfSections must be a whole number greater than zero.');
-    }
+    this.validateSectionCount(data.numberOfSections);
+    const sectionCount = data.numberOfSections ?? 0;
 
     const academicYear = await this.prisma.academicYear.findFirst({
       where: { id: data.academicYearId, schoolId },
@@ -147,8 +146,8 @@ export class SchoolClassesService {
           },
         });
 
-        await tx.section.createMany({
-          data: Array.from({ length: data.numberOfSections }, (_, index) => ({
+        if (sectionCount > 0) await tx.section.createMany({
+          data: Array.from({ length: sectionCount }, (_, index) => ({
             schoolId,
             classId: schoolClass.id,
             name: String(index + 1),
@@ -167,7 +166,7 @@ export class SchoolClassesService {
       });
 
       return {
-        message: `${classes.length} classes and ${classes.length * data.numberOfSections} sections created successfully`,
+        message: `${classes.length} classes and ${classes.length * sectionCount} sections created successfully`,
         academicYearId: data.academicYearId,
         classes,
       };

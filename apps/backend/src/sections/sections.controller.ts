@@ -20,6 +20,9 @@ import { CreateSectionDto, UpdateSectionDto } from './sections.dto';
 export class SectionsController {
   constructor(private readonly sectionsService: SectionsService) {}
 
+  @Post(':id/roll-numbers/preview') @RequirePermissions('STUDENT_VIEW') previewRolls(@Req() req:any,@Param('id') id:string,@Body() body:unknown){return this.sectionsService.rollNumbers(req.user.schoolId,req.user.id,id,body);}
+  @Post(':id/roll-numbers/generate') @RequirePermissions('STUDENT_UPDATE') generateRolls(@Req() req:any,@Param('id') id:string,@Body() body:unknown){return this.sectionsService.rollNumbers(req.user.schoolId,req.user.id,id,body,true);}
+
   @Post()
   @RequirePermissions('SECTION_CREATE')
   create(@Req() req: any, @Body() dto: CreateSectionDto) {

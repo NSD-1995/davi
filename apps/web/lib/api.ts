@@ -115,6 +115,7 @@ export const classroomManagementApi={
   updateSettings:(t:string,y:string,c:string,s:string,d:any)=>request(`${classroomPath(y,c,s)}/settings`,{method:'PATCH',body:json(d)},t),
 };
 export const sectionApi = {
+  rollNumbers:(token:string,sectionId:string,action:'preview'|'generate',body:unknown)=>request<any>(`/sections/${sectionId}/roll-numbers/${action}`,{method:'POST',body:json(body)},token),
   remove: (t:string,id:string) => request(`/sections/${id}`, {method:'DELETE'}, t),
   create: (t: string, data: Record<string, unknown>) => request<Section>('/sections', { method: 'POST', body: json(data) }, t),
   update: (t: string, id: string, data: Record<string, unknown>) => request<Section>(`/sections/${id}`, { method: 'PATCH', body: json(data) }, t),
@@ -150,6 +151,7 @@ export const staffApi = {
 };
 export const teacherApi = { saveTeachingSetup:(t:string,id:string,d:any)=>request<any>(`/teachers/${id}/teaching-setup`,{method:'PUT',body:json(d)},t), saveEligibility:(t:string,id:string,d:any)=>request<any>(`/teachers/${id}/eligibility`,{method:'PUT',body:json(d)},t), saveCapabilities:(t:string,id:string,subjectIds:string[])=>request<any>(`/teachers/${id}/capabilities`,{method:'PUT',body:json({subjectIds})},t), removeSubjectAssignment:(t:string,id:string,assignmentId:string)=>request(`/teachers/${id}/subject-assignments/${assignmentId}`,{method:'DELETE'},t), classTeacherOptions:(t:string,y:string)=>request<any[]>(`/teachers/class-teacher-options?academicYearId=${y}`,{},t), list: (t: string) => request<Array<{ id: string; userId: string; teacherCode: string; specialization?: string | null; qualification?: string | null; capableSubjectIds?:string[]; timetableEligibility?:any; status: string; user: { firstName: string; lastName: string } }>>('/teachers', {}, t), get: (t:string,id:string)=>request<Record<string,any>>(`/teachers/${id}`,{},t), assignments:(t:string,id:string)=>request<Record<string,any>[]>(`/teachers/${id}/assignments`,{},t), create: (t: string, data: Record<string, unknown>) => request('/teachers', { method: 'POST', body: json(data) }, t), update: (t: string, id: string, data: Record<string, unknown>) => request(`/teachers/${id}`, { method: 'PATCH', body: json(data) }, t), remove: (t: string, id: string) => request(`/teachers/${id}`, { method: 'DELETE' }, t) };
 export const parentApi = {
+ verifyConsent:(t:string,id:string,body:unknown)=>request<any>(`/parents/${id}/consent-verification`,{method:'POST',body:json(body)},t),
   list: (t: string) => request<Parent[]>('/parents', {}, t),
   get: (t: string, id: string) => request<Parent>(`/parents/${id}`, {}, t),
   onboard: (t: string, data: Record<string, unknown>) => request<{ parent: Parent; credentials: { username: string; temporaryPassword: string } | null; verificationRequired: boolean }>('/parents/onboard', { method: 'POST', body: json(data) }, t),
@@ -220,3 +222,15 @@ export async function punchAttendance(token:string,kind:'CHECK_IN'|'CHECK_OUT') 
  const input=own.policy.locationVerificationEnabled?{location:await attendanceLocation(typeof navigator==='undefined'?undefined:navigator.geolocation)}:{};
  return kind==='CHECK_IN'?teacherCoverApi.checkIn(token,input):operationsApi.checkOut(token,input);
 }
+
+export const studentMigrationApi = {
+ list:(t:string,year:string)=>request<any[]>(`/student-migrations?${admissionQuery({academicYearId:year})}`,{},t),
+ detail:(t:string,id:string)=>request<any>(`/student-migrations/${id}`,{},t),
+ rows:(t:string,id:string,query:Record<string,unknown>)=>request<any>(`/student-migrations/${id}/rows?${admissionQuery(query)}`,{},t),
+ create:(t:string,body:unknown)=>request<any>('/student-migrations',{method:'POST',body:json(body)},t),
+ action:(t:string,id:string,action:string,body?:unknown,method='POST')=>request<any>(`/student-migrations/${id}/${action}`,{method,body:body===undefined?undefined:json(body)},t),
+ get:(t:string,path:string)=>request<any>('/student-migrations/'+path,{},t),
+ policy:(t:string,body:unknown)=>request<any>('/student-migrations/policy',{method:'PUT',body:json(body)},t),
+ upload:async(t:string,id:string,files:File[])=>{const form=new FormData();files.forEach(file=>form.append('files',file));const response=await fetch(`${API_URL}/student-migrations/${id}/files`,{method:'POST',headers:{Authorization:'Bearer '+t},body:form});const body=await response.json();if(!response.ok)throw new ApiError(messageOf(body),response.status);return body;},
+ download:async(t:string,path:string,name:string)=>{const response=await fetch(`${API_URL}/student-migrations/${path}`,{headers:{Authorization:'Bearer '+t}});if(!response.ok)throw new ApiError(messageOf(await response.json()),response.status);const url=URL.createObjectURL(await response.blob()),a=document.createElement('a');a.href=url;a.download=name;a.click();URL.revokeObjectURL(url);},
+};

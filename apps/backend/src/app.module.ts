@@ -1,3 +1,4 @@
+import { StudentMigrationModule } from './student-migration/student-migration.module';
 import { Module } from '@nestjs/common';
 import { WorkflowModule } from './academic-workflow/workflow.module';
 import { APP_INTERCEPTOR } from '@nestjs/core';
@@ -37,6 +38,7 @@ import { SyllabusModule } from './syllabus/syllabus.module';
 @Module({
   imports: [
     WorkflowModule,
+    StudentMigrationModule,
     PrismaModule,
     AuthModule,
     SchoolsModule,

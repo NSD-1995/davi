@@ -1,5 +1,29 @@
 # Admissions CRM and flexible section allocation
 
+## Bulk student upload
+
+Students > Student Import > Upload students & sections creates enrollments directly
+in the Student Directory after preview and explicit approval. It creates no
+admission enquiry, application or follow-up. The commit rechecks student creation
+permissions and capacity, creates approved sections and students atomically, and
+records a school-scoped audit. Repeating the same approved payload returns the
+previous result without adding duplicate students. Manual enquiries use the
+separate workflow below.
+
+## Current admission workflow
+
+Register an enquiry and its follow-ups, then choose **Create admission** to reuse
+the enquiry's student, parent, contact, class and academic-year details. Complete
+the admission details and required documents/fees, then choose **Confirm admission**.
+No separate admission decision or joined/not-joined action is required.
+The confirmation validates permissions, versions, duplicates and section capacity,
+creates the enrollment and marks its enquiry converted in one serializable transaction.
+Blank admission numbers use the configured school short name. The endpoint is
+`POST /api/v1/admissions/applications/:id/confirm` and uses the existing
+`ADMISSIONS_JOIN` permission. Legacy decision/joining records and endpoints remain
+compatible; their navigation URLs redirect to Admissions.
+
+
 ## Workflow and existing integrations
 
 The existing StudentAdmissionsModule now owns enquiries, append-only interactions,
@@ -192,3 +216,141 @@ npm.cmd run build --workspace apps/web
 
 Browser/mobile visual acceptance still requires a signed-in browser session. The
 repository has no configured ESLint script or ESLint installation.
+
+## Section Capacity & Allocation
+
+Academic Setup > Section Capacity & Allocation reuses the existing enrollment
+planner and `/enrollment-planning` routes. The legacy Students allocation route
+continues to render the same component. Quick academic setup now links to the
+planner and creates classes only. Sections and capacities are configured later;
+Quick academic setup does not display or submit section count or capacity.
+
+Set the maximum students per section for the selected academic group, then choose
+**Generate sections from group norms**. The calculation includes ACTIVE enrollment
+and pending applications, subtracts existing usable seats, and divides any shortage
+by the saved effective group capacity, rounding up. Manual section plans remain
+available as an advanced alternative. Existing sections and their heterogeneous capacities are preserved.
+The suggestion creates no database records. Preview balances student counts (or
+percentage utilization) and shows proposed placements. Approve Allocation requires
+a reason and confirmation; SECTION_CREATE is additionally required for new
+sections, and SECTION_UPDATE for changed capacities. ENROLLMENT_MOVE authorizes
+reviewed single/bulk movement, rebalancing and atomic two-student swaps through
+the existing transfer screen.
+
+School capacity policy is stored in SchoolSetting.sectionCapacityPolicy. Rules
+can target an academic year plus academic level, grade, existing room label or
+section. All applicable maxima are ceilings: the smallest wins. The largest
+applicable reservation is deducted once; reservations are not additive. A school
+maximum is optional. Existing Section.capacity remains the manually configured
+physical capacity. Classroom identity reuses Section.room; equal room labels share
+a ceiling, but this does not create a room timetable or pooled room-seat model.
+The policy editor supports school defaults, scoped limits/reservations, near-full
+percentage, balancing preference and student allowed/preferred sections. Empty
+allowed-section lists explicitly prevent automatic placement. More constrained
+students are considered first, with augmenting paths among proposed placements
+before reporting a shortage. Existing placements are fixed. Stable enrollment
+order and section IDs resolve ties. Preferences are soft; allowed sections and
+capacity are hard constraints.
+
+Unplaced ACTIVE enrollments are the persistent placement waitlist; no duplicate
+student or enrollment identity is created. Preview reports which students cannot
+be placed and why. Approval can assign available students and leave the reviewed
+remainder unassigned. This is a placement waitlist for confirmed enrollments, not
+a separate pre-admission application queue. New sections do not automatically gain
+class teachers or published timetable entries. Use the existing teacher allocation
+and timetable validation/publishing workflows after approving a new section.
+
+Admission confirmation, promotion and withdrawal already write the common active
+enrollment source. Summary and previews therefore reflect those changes on reload;
+there is no background reassignment or implicit movement on a year switch. When
+autoAssignOnJoin is enabled, a new confirmed admission with no manually selected
+section receives an available section inside its joining transaction. School
+requireSectionOnJoin policy continues to reject joining without a section; schools
+using a confirmed-enrollment placement waitlist must allow unassigned enrollment.
+Capacity reporting and placement remain scoped to school and academic year.
+
+`POST /enrollment-planning/capacity-policy` uses SECTION_UPDATE, validates school/year
+relationships and current occupancy, compares the expected policy, and audits the
+before/after decision. Preview returns expectedPolicy and section timestamps;
+approval revalidates them and enrollment versions. Admission, promotion and
+movement checks use the effective policy capacity. Migration
+20261019120000_section_capacity_policy adds the JSON policy, a partial active-seat
+lookup index, and PostgreSQL guards enforcing effective capacity even on older
+write paths. Policy changes cannot reduce usable seats below active occupancy.
+Serializable transactions and final-state deferred checks protect concurrent seat
+reservations and allow full-section swaps. Allocation approval stores the reviewed
+plan, waitlist, old section configuration and reason in school audit logs; movements
+also retain existing enrollment movement history and add school audit entries.
+
+Validation: backend and frontend builds and web TypeScript checks passed. Added
+unit coverage for scoped maxima, reservations, heterogeneous capacities, deterministic
+waitlists, constrained/preferred placement, utilization balancing and augmenting
+paths. PostgreSQL admission integration tests cover reviewed partial allocation,
+policy conflict detection and concurrent competition for one seat, alongside the
+existing admission/promotion/swap fixtures. Browser/mobile visual acceptance has
+not been performed. Restart the backend after deployment to load the new schema.
+
+## Student upload and norm-based intake
+
+Use **Students > Upload Students & Sections** (`/students/upload`). Set the maximum
+students per section for each academic group in Section Capacity & Allocation;
+these are school-entered norms, not hard-coded regulatory assumptions. Quick
+academic setup creates classes without section counts or capacities.
+
+Download the CSV template and supply firstName, className, parentName and mobile.
+Optional columns are lastName, dateOfBirth (YYYY-MM-DD), gender and extra.fieldKey
+for existing configured application fields. The class must match an active class
+name in the selected academic year. Class eligibility is explicitly taken from
+the record; the system does not infer it from age. CSV input is limited to 500
+students and 1 MB, supports quoted cells and rejects ambiguous headers or malformed
+rows. Backend validation normalizes parent mobile numbers and rejects unknown
+classes, repeated students, existing applications and missing required fields.
+
+Preview (`POST /enrollment-planning/intake-preview`) groups uploaded applicants by
+class, includes existing confirmed students and pending applications, and generates
+proposed section counts from saved effective capacities. Existing placements stay
+fixed. For 76 incoming students, no current occupants and a group maximum of 30,
+three sections are proposed with a balanced projected distribution of 26, 25, 25.
+Individual section/room caps and reservations still restrict usable seats. There
+is no default guess when capacity norms are missing.
+
+The review shows each class, required/retained sections, current occupancy,
+projected counts and student suggestions. Import confirmation
+(`POST /enrollment-planning/intake-confirm`) rechecks the exact preview against
+current school/year policy, enrollment versions, pending applications and section
+configuration. It creates sections and applications atomically and records a
+school audit. ADMISSIONS_MANAGE is required; creating proposed sections additionally
+requires SECTION_CREATE and ENROLLMENT_ALLOCATE. Each application links to an
+enquiry with a follow-up scheduled 24 hours after import. These are in-app CRM
+records; no external messages are sent. A repeated import is rejected instead of
+creating duplicate applications.
+
+Uploaded applications do not create enrollments, reserve seats or bypass required
+documents, verified fees, admission decisions or joining confirmation. Suggested
+sections are provisional. With automatic assignment enabled in capacity policy,
+joining selects an available eligible section using the saved balancing preference,
+locks sections in stable order and rechecks effective capacity inside the same
+serializable transaction. The application stores the section actually assigned.
+A manually chosen section is validated rather than silently replaced. When no seat
+is available, confirmed enrollment remains on the placement waitlist if the school
+allows unassigned joining; requireSectionOnJoin continues to block joining without
+a seat. Concurrent conflicts require refresh/retry. Existing students, published
+timetables and class-teacher assignments are not changed.
+
+The normal application form supports the same automatic-at-joining choice. The
+allocation planner's norm-based generation now counts pending manual applications
+as well as confirmed enrollment, so sections can be reviewed before those students
+join. Existing transfer/swap and promotion workflows remain available.
+
+Additional validation includes deterministic 76/30 section generation, reserved
+capacity arithmetic, quoted CSV parsing, duplicate/stale intake rejection, import
+rollback without approval, scheduled follow-up links and concurrent automatic
+joining for the final seat. Browser/mobile visual acceptance remains outstanding.
+
+## Durable migration wizard
+
+For CSV/XLSX/PDF/images, persisted staging, OCR, explicit student/enrollment commit,
+import history, verified parent identity and safe rollback, use **Students > Import
+& Migration**. See [Student Import & Migration](student-import-migration.md) for the
+workflow, permissions, scanner/OCR setup, API routes and validation limits. The
+simple CSV intake above remains the admission-application/follow-up workflow.

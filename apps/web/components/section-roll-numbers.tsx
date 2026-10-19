@@ -1,0 +1,11 @@
+'use client';
+import { useState } from 'react';
+import { sectionApi } from '../lib/api';
+import { useAuth } from '../lib/auth-context';
+import { Modal } from './ui';
+export function SectionRollNumbers({academicYearId,sectionId,onSaved}:{academicYearId:string;sectionId:string;onSaved:()=>Promise<void>}){
+ const {session,can}=useAuth();const [preview,setPreview]=useState<any>(null),[busy,setBusy]=useState(false),[error,setError]=useState(''),[message,setMessage]=useState('');
+ if(!can('STUDENT_UPDATE'))return null;
+ async function run(commit=false){if(!session)return;setBusy(true);setError('');setMessage('');try{const data=await sectionApi.rollNumbers(session.token,sectionId,commit?'generate':'preview',{academicYearId,...(commit?{expectedPreview:preview.expectedPreview}:{})});if(commit){setPreview(null);setMessage(data.updated+' roll numbers generated.');await onSaved();}else setPreview(data);}catch(e:any){setError(e.message);}finally{setBusy(false);}}
+ return <><section className="card"><div className="button-row"><button className="button secondary" disabled={busy} onClick={()=>void run()}>Preview roll numbers</button><span>Alphabetical order for unnumbered students. Existing numbers are preserved; new numbers follow the highest number.</span></div>{error&&<p role="alert">{error}</p>}{message&&<p role="status">{message}</p>}</section>{preview&&<Modal wide title="Generate section roll numbers" onClose={()=>{if(!busy)setPreview(null);}}><p>{preview.changed} students will receive roll numbers in this section and academic year.</p>{preview.errors.map((e:string,i:number)=><p role="alert" key={i}>{e}</p>)}<div className="table-wrap"><table><thead><tr><th>Student</th><th>Admission number</th><th>Current roll</th><th>Proposed roll</th></tr></thead><tbody>{preview.rows.map((row:any)=><tr key={row.enrollmentId}><td>{row.studentName}</td><td>{row.admissionNumber}</td><td>{row.current || 'Unassigned'}</td><td>{row.proposed}{!row.changed?' (preserved)':''}</td></tr>)}</tbody></table></div>{error&&<p role="alert">{error}</p>}<button className="button" disabled={busy||!preview.changed||preview.errors.length>0} onClick={()=>void run(true)}>{busy?'Saving...':'Generate roll numbers'}</button></Modal>}</>;
+}

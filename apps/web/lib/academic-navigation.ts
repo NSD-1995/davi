@@ -4,6 +4,7 @@ export const academicNavigation: AcademicDestination[] = [
   { label: 'Academic Setup', icon: 'setup', links: [
     { href: '/academics/academic-years', label: 'Academic Years', permission: 'ACADEMIC_YEAR_VIEW' },
     { href: '/academics/classes', label: 'Classes & Sections', permission: 'CLASS_VIEW' },
+    { href: '/academics/section-capacity', label: 'Section Capacity & Allocation', permission: 'STUDENT_VIEW' },
     { href: '/academics/groups', label: 'Academic Groups', permission: 'TIMETABLE_VIEW' },
     { href: '/academics/subjects', label: 'Subjects', permission: 'SUBJECT_VIEW' },
     { href: '/people/teachers', label: 'Teaching Staff', permission: 'STAFF_VIEW' },

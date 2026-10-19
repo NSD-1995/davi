@@ -19,15 +19,14 @@ const schoolGroups = [
     {href:'/admissions/dashboard',label:'Admissions Overview',icon:'A',permission:'ADMISSIONS_VIEW'},
     {href:'/admissions/enquiries',label:'Enquiries',icon:'E',permission:'ADMISSIONS_VIEW'},
     {href:'/admissions/follow-ups',label:'Follow-ups',icon:'F',permission:'ADMISSIONS_VIEW'},
-    {href:'/admissions/applications',label:'Applications',icon:'A',permission:'ADMISSIONS_VIEW'},
-    {href:'/admissions/decisions',label:'Admission Decisions',icon:'D',permission:'ADMISSIONS_VIEW'},
-    {href:'/admissions/joining',label:'Joined / Not Joined',icon:'J',permission:'ADMISSIONS_VIEW'},
+    {href:'/admissions/applications',label:'Admissions',icon:'A',permission:'ADMISSIONS_VIEW'},
     {href:'/admissions/settings',label:'Admission Settings',icon:'S',permission:'ADMISSIONS_SETTINGS_MANAGE'},
   ]},
   { label: 'Students', links: [
     {href:'/people/students',label:'Student Directory',icon:'S',permission:'STUDENT_VIEW'},
     {href:'/students/unassigned',label:'Unassigned Students',icon:'U',permission:'STUDENT_VIEW'},
-    {href:'/students/allocation',label:'Class & Section Allocation',icon:'A',permission:'ENROLLMENT_ALLOCATE'},
+    {href:'/students/import-migration',label:'Student Import',icon:'I',permission:'students.import.view'},
+    {href:'/students/allocation',label:'Section Capacity & Allocation',icon:'A',permission:'ENROLLMENT_ALLOCATE'},
     {href:'/students/transfers',label:'Transfers & Swaps',icon:'T',permission:'ENROLLMENT_MOVE'},
     {href:'/students/promotions',label:'Promotions',icon:'P',permission:'ENROLLMENT_PROMOTE'},
   ]},
@@ -62,7 +61,7 @@ export function AppShell({ children }: { children: ReactNode }) {
       } }} className={open ? 'sidebar open' : 'sidebar'}>
       <div className="brand"><span className="brand-mark">D</span><div><strong>DAVI</strong><small>{platformAdmin ? 'Super Admin' : 'School Admin'}</small></div></div>
       <button className="sidebar-collapse" aria-label={compact ? 'Expand sidebar' : 'Collapse sidebar'} onClick={() => setCompact(!compact)}>{compact ? <PanelLeftOpen size={18}/> : <PanelLeftClose size={18}/>}</button><button className="sidebar-mobile-close" aria-label="Close navigation" onClick={() => setOpen(false)}><X size={20}/></button>
-      <nav aria-label="Primary">{groups.map(group => <Fragment key={group.label || 'main'}>{group.label === 'School Operations' && !platformAdmin && <AcademicNavigation path={path} onNavigate={() => setOpen(false)}/ >}<div className="nav-group">{group.label && <p>{group.label}</p>}{group.links.filter(link => can(link.permission)&&(!link.href.startsWith('/admissions/')||can('ADMISSIONS_VIEW'))&&(!link.href.startsWith('/students/')||can('STUDENT_VIEW'))&&(link.href!=='/people/teacher-attendance'||can('STAFF_VIEW')||can('timetable.substitution.view'))).map(link => <Link key={link.href} title={link.label} aria-current={path === link.href ? 'page' : undefined} href={link.href} onClick={() => setOpen(false)} className={path === link.href ? 'active' : ''}><span>{link.icon}</span><span className="nav-label">{link.label}</span></Link>)}</div></Fragment>)}</nav>
+      <nav aria-label="Primary">{groups.map(group => <Fragment key={group.label || 'main'}>{group.label === 'School Operations' && !platformAdmin && <AcademicNavigation path={path} onNavigate={() => setOpen(false)}/ >}<div className="nav-group">{group.label && <p>{group.label}</p>}{group.links.filter(link => (link.href==='/students/import-migration'?(can('students.import.view')||can('ADMISSIONS_MANAGE')):can(link.permission))&&(!link.href.startsWith('/admissions/')||can('ADMISSIONS_VIEW'))&&(!link.href.startsWith('/students/')||can('STUDENT_VIEW'))&&(link.href!=='/people/teacher-attendance'||can('STAFF_VIEW')||can('timetable.substitution.view'))).map(link => <Link key={link.href} title={link.label} aria-current={path === link.href ? 'page' : undefined} href={link.href} onClick={() => setOpen(false)} className={path === link.href ? 'active' : ''}><span>{link.icon}</span><span className="nav-label">{link.label}</span></Link>)}</div></Fragment>)}</nav>
       <button className="logout" title="Logout" aria-label="Logout" onClick={logout}><span>↪</span> Logout</button>
     </aside>
     <div className="main-column">

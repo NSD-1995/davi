@@ -1,3 +1,4 @@
+import { assignSectionRoll } from '../sections/assign-roll-number';
 import { EnrollmentAllocationService } from '../student-admissions/enrollment-allocation.service';
 import { admissionsTransaction } from '../student-admissions/admissions-transaction';
 import { parse, id, reason, checkVersion } from '../student-admissions/admissions-rules';
@@ -24,10 +25,10 @@ export class StudentsService {
     return this.prisma.studentEnrollment.findUnique({where:{studentId_schoolId_academicYearId:{studentId,schoolId,academicYearId:data.academicYearId}},include:{academicYear:true,schoolClass:true,section:true}});
   }
   async findEnrollments(studentId: string, schoolId: string | null) { this.requireSchool(schoolId); await this.findOne(studentId, schoolId); return this.prisma.studentEnrollment.findMany({ where: { studentId, schoolId }, include: { academicYear: true, schoolClass: true, section: true }, orderBy: { createdAt: 'desc' } }); }
-  async updateEnrollment(studentId:string,enrollmentId:string,schoolId:string|null,input:UpdateStudentEnrollmentDto,actorId:string) {
+  async updateEnrollment(studentId:string,enrollmentId:string,schoolId:string|null,input:UpdateStudentEnrollmentDto,actorId:string,transaction?:any) {
     this.requireSchool(schoolId); await this.findOne(studentId,schoolId);
-    const data=parse(z.object({classId:id.optional(),sectionId:id.nullable().optional(),rollNumber:z.string().max(100).optional(),status:z.enum(['ACTIVE','TRANSFERRED','PROMOTED','WITHDRAWN']).optional(),version:z.number().int().positive().optional(),reason:reason.default('Enrollment details updated.')} ).strict(),input);
-    return admissionsTransaction(this.prisma,async tx=>{
+    const data=parse(z.object({classId:id.optional(),sectionId:id.nullable().optional(),rollNumber:z.string().max(100).optional(),address:z.string().max(2000).nullable().optional(),admissionDate:z.string().date().nullable().optional(),status:z.enum(['ACTIVE','TRANSFERRED','PROMOTED','WITHDRAWN']).optional(),version:z.number().int().positive().optional(),reason:reason.default('Enrollment details updated.')} ).strict(),input);
+    const execute=async (tx:any)=>{
       await this.allocation.permission(tx,schoolId,actorId,'ENROLLMENT_MOVE');
       const before=await tx.studentEnrollment.findFirst({where:{id:enrollmentId,studentId,schoolId}});if(!before)throw new NotFoundException('Enrollment not found.');
       if(data.version!==undefined)checkVersion(before.version,data.version);
@@ -35,8 +36,19 @@ export class StudentsService {
       if(data.status==='ACTIVE'&&before.status!=='ACTIVE')throw new BadRequestException('Inactive enrollments cannot be reactivated through a details edit.');
       if(data.status==='PROMOTED'&&before.status!=='PROMOTED')throw new BadRequestException('Use the promotion workflow to create the new academic-year enrollment.');
       if(data.status&&data.status!==before.status)await tx.enrollmentMovement.create({data:{schoolId,enrollmentId,kind:'STATUS_CHANGE',fromClassId:before.classId,fromSectionId:before.sectionId,toClassId:data.classId||before.classId,toSectionId:data.sectionId===undefined?before.sectionId:data.sectionId,reason:data.reason,actorId}});
-      return tx.studentEnrollment.update({where:{id:enrollmentId},data:{...(data.rollNumber!==undefined?{rollNumber:data.rollNumber.trim()||null}:{}),...(data.status?{status:data.status}:{}),version:{increment:1}},include:{academicYear:true,schoolClass:true,section:true}});
-    });
+      const current=await tx.studentEnrollment.findUnique({where:{id:enrollmentId}});const rollNumber=data.rollNumber!==undefined?await assignSectionRoll(tx,schoolId,before.academicYearId,current.sectionId,data.rollNumber,enrollmentId):undefined;
+      return tx.studentEnrollment.update({where:{id:enrollmentId},data:{...(data.rollNumber!==undefined?{rollNumber}:{}),...(data.status?{status:data.status}:{}),...(data.address!==undefined?{address:data.address}:{}),...(data.admissionDate!==undefined?{admissionDate:data.admissionDate?new Date(data.admissionDate):null}:{}),version:{increment:1}},include:{academicYear:true,schoolClass:true,section:true}});
+    };
+    return transaction?execute(transaction):admissionsTransaction(this.prisma,execute);
+  }
+  async applyMigrationUpdate(tx:any,schoolId:string,actorId:string,enrollmentId:string,values:any){
+    await this.allocation.permission(tx,schoolId,actorId,'STUDENT_UPDATE');
+    const enrollment=await tx.studentEnrollment.findFirst({where:{id:enrollmentId,schoolId,academicYearId:values.academicYearId,status:'ACTIVE'},include:{student:true}});
+    if(!enrollment)throw new NotFoundException('Target enrollment not found.');
+    if(await tx.studentEnrollment.count({where:{studentId:enrollment.studentId,schoolId:{not:schoolId}}}))throw new ForbiddenException('This student has another school membership. Review shared identity changes outside migration.');
+    await tx.user.update({where:{id:enrollment.student.userId},data:{firstName:values.firstName,lastName:values.lastName || ''}});
+    await tx.student.update({where:{id:enrollment.studentId},data:{...(values.dateOfBirth===null?{birthDate:null}:values.dateOfBirth?{birthDate:new Date(values.dateOfBirth)}:{}),...(values.gender===null?{gender:null}:values.gender?{gender:values.gender}: {})}});
+    return this.updateEnrollment(enrollment.studentId,enrollmentId,schoolId,{classId:values.classId,sectionId:values.sectionId,version:enrollment.version,reason:values.reason,...(values.address!==undefined?{address:values.address}:{}),...(values.admissionDate!==undefined?{admissionDate:values.admissionDate}:{}),...(values.rollNumber?{rollNumber:values.rollNumber}:{})},actorId,tx);
   }
   private schoolView(student: any, schoolId: string) { if (student.user) student.user.passwordHash = undefined; const enrollments = (student.enrollments ?? []).filter((enrollment: any) => enrollment.schoolId === schoolId); const studentParents = (student.studentParents ?? []).filter((link: any) => link.status === 'ACTIVE'); return { ...student, schoolId, admissionNumber: enrollments[0]?.admissionNumber ?? null, enrollments, studentParents }; }
   private requireSchool(schoolId: string | null): asserts schoolId is string { if (!schoolId) throw new ForbiddenException('A school account is required.'); }

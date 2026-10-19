@@ -1,9 +1,13 @@
 import './environment';
+const { json } = require('express');
 import { NestFactory } from '@nestjs/core';
 import { AppModule } from './app.module';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
+  // Register globally: Nest detects jsonParser by name and would otherwise skip
+  // its default parser even when this middleware is mounted on selected routes.
+  app.use(json({limit:'2mb'}));
   const allowedOrigins = (process.env.CORS_ORIGINS ?? 'http://localhost:3000')
     .split(',')
     .map((origin) => origin.trim())
