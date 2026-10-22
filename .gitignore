@@ -10,3 +10,4 @@ dist
 private-uploads/
 
 .npm-cache/
+.tmp/assessment/

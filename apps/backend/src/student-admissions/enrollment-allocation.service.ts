@@ -35,10 +35,10 @@ export class EnrollmentAllocationService {
     return admissionsTransaction(this.db, tx => this.frame(tx, schoolId, q.academicYearId, q.classId));
   }
   async suggest(schoolId:string|null,body:unknown){
-    this.school(schoolId);const data=parse(z.object({academicYearId:id,classId:id}).strict(),body);
-    const sections=await admissionsTransaction(this.db,async tx=>{const frame=await this.frame(tx,schoolId,data.academicYearId,data.classId);const occupied=Object.fromEntries(frame.capacitySummary.map((s:any)=>[s.id,s.occupied]));return sectionProposal(frame.schoolClass,frame.capacityPolicy,frame.total+frame.pendingApplications,occupied).map((s:any)=>({key:s.key,...(s.id?{id:s.id}:{}),name:s.name,capacity:s.capacity}));});
+    this.school(schoolId);const data=parse(z.object({academicYearId:id,classId:id,naming:z.enum(['AUTO','NUMERIC','ALPHABETIC']).default('AUTO')}).strict(),body);
+    const sections=await admissionsTransaction(this.db,async tx=>{const frame=await this.frame(tx,schoolId,data.academicYearId,data.classId);const occupied=Object.fromEntries(frame.capacitySummary.map((s:any)=>[s.id,s.occupied]));return sectionProposal(frame.schoolClass,frame.capacityPolicy,frame.total+frame.pendingApplications,occupied,data.naming).map((s:any)=>({key:s.key,...(s.id?{id:s.id}:{}),name:s.name,capacity:s.capacity}));});
     if(!sections.length)throw new BadRequestException('No confirmed students need a section yet. Upload an intake list or confirm admissions first.');
-    return this.preview(schoolId,{...data,sections});
+    return this.preview(schoolId,{academicYearId:data.academicYearId,classId:data.classId,sections});
   }
   async preview(schoolId: string | null, body: unknown) {
     this.school(schoolId); const plan = parse(planSchema, body);

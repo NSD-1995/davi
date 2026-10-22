@@ -37,6 +37,7 @@ enum ParentStatus {
 }
 
 model School {
+ assessmentPatterns AssessmentPattern[]
   studentImportJobs StudentImportJob[]
   admissionEnquiries AdmissionEnquiry[]
   admissionApplications AdmissionApplication[]
@@ -200,6 +201,7 @@ model UserRole {
 }
 
 model SchoolSetting {
+ assessmentAiPolicy Json?
   studentImportPolicy Json?
   sectionCapacityPolicy Json?
   admissionsPolicy Json?
@@ -223,6 +225,7 @@ model SchoolSetting {
 }
 
 model AcademicYear {
+ assessmentPatterns AssessmentPattern[]
   studentImportJobs StudentImportJob[]
   @@unique([id, schoolId])
   admissionEnquiries AdmissionEnquiry[]
@@ -467,6 +470,9 @@ model Student {
 }
 
 model StudentEnrollment {
+ @@unique([id,schoolId,academicYearId])
+ assessmentObservations AssessmentObservation[]
+ assessmentReports AssessmentReport[]
   address String?
   admissionDate DateTime? @db.Date
   version Int @default(1)
@@ -978,7 +984,74 @@ model TimetableSubstitution {
 
 }
 
+model AssessmentPattern {
+ school School @relation(fields:[schoolId], references:[id], onDelete:Restrict)
+ academicYear AcademicYear @relation(fields:[academicYearId,schoolId], references:[id,schoolId], onDelete:Restrict)
+ @@unique([id,schoolId,academicYearId])
+ id String @id @default(uuid())
+ schoolId String
+ academicYearId String
+ scopeKey String
+ name String
+ version Int
+ config Json
+ createdBy String
+ createdAt DateTime @default(now())
+ exams Exam[]
+ @@unique([schoolId,academicYearId,scopeKey,version])
+ @@index([schoolId,academicYearId])
+}
+
+model AssessmentObservation {
+ id String @id @default(uuid())
+ schoolId String
+ academicYearId String
+ examId String
+ enrollmentId String
+ competencyKey String
+ rating String
+ observedOn DateTime @db.Date
+ remarks String
+ evidence String?
+ actorId String
+ requestKey String
+ createdAt DateTime @default(now())
+ exam Exam @relation(fields:[examId,schoolId,academicYearId], references:[id,schoolId,academicYearId], onDelete:Restrict)
+ enrollment StudentEnrollment @relation(fields:[enrollmentId,schoolId,academicYearId], references:[id,schoolId,academicYearId], onDelete:Restrict)
+ @@unique([examId,requestKey])
+ @@index([schoolId,academicYearId,enrollmentId,competencyKey,observedOn])
+}
+
+model AssessmentReport {
+ id String @id @default(uuid())
+ schoolId String
+ academicYearId String
+ examId String
+ enrollmentId String
+ version Int
+ snapshot Json
+ publishedAt DateTime @default(now())
+ exam Exam @relation(fields:[examId,schoolId,academicYearId], references:[id,schoolId,academicYearId], onDelete:Restrict)
+ enrollment StudentEnrollment @relation(fields:[enrollmentId,schoolId,academicYearId], references:[id,schoolId,academicYearId], onDelete:Restrict)
+ @@unique([examId,enrollmentId,version])
+ @@index([schoolId,academicYearId,enrollmentId,publishedAt])
+}
+
 model Exam {
+ assessmentSectionId String?
+ @@unique([id,schoolId,academicYearId])
+ assessmentPatternId String?
+ assessmentPattern AssessmentPattern? @relation(fields:[assessmentPatternId,schoolId,academicYearId], references:[id,schoolId,academicYearId], onDelete:Restrict)
+ assessmentConfig Json?
+ assessmentScope Json?
+ assessmentRoster Json?
+ termKey String?
+ revision Int @default(1)
+ reviewedBy String?
+ approvedBy String?
+ approvedAt DateTime?
+ observations AssessmentObservation[]
+ progressReports AssessmentReport[]
   id             String        @id @default(uuid())
   schoolId       String
   academicYearId String
@@ -993,7 +1066,7 @@ model Exam {
   createdAt      DateTime      @default(now())
   updatedAt      DateTime      @updatedAt
 
-  @@unique([academicYearId, name])
+  @@unique([academicYearId, name, assessmentSectionId])
   @@index([schoolId, academicYearId])
 }
 
@@ -1016,6 +1089,9 @@ model ExamSubject {
 }
 
 model StudentMark {
+ componentScores Json?
+ assessmentState String @default("PRESENT")
+ revision Int @default(1)
   snapshotSection Section? @relation("MarkSectionHistory", fields: [sectionIdSnapshot], references: [id], onDelete: Restrict)
   locationSnapshotted Boolean @default(false)
   sectionIdSnapshot String?

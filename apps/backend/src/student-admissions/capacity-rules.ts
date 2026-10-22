@@ -1,3 +1,4 @@
+import { sectionName, SectionNaming } from './section-naming';
 import { BadRequestException } from '@nestjs/common';
 import { z } from 'zod';
 import { id } from './admissions-rules';
@@ -65,7 +66,7 @@ export async function seatCapacity(tx:any,schoolId:string,academicYearId:string,
 }
 
 /** Uses saved norms; never guesses a maximum or writes sections. */
-export function sectionProposal(schoolClass:any,policy:any,demand:number,occupied:Record<string,number>={}){
+export function sectionProposal(schoolClass:any,policy:any,demand:number,occupied:Record<string,number>={},naming:SectionNaming='AUTO'){
   const sections=schoolClass.sections.filter((s:any)=>s.status==='ACTIVE').map((s:any)=>{
     const limit=effectiveCapacity(policy,schoolClass,s);
     if(limit.capacity===null || limit.capacity<(occupied[s.id] || 0))throw new BadRequestException('Configure valid capacity for '+schoolClass.name+' / '+s.name+'.');
@@ -77,7 +78,7 @@ export function sectionProposal(schoolClass:any,policy:any,demand:number,occupie
   const additional=shortage>0?Math.ceil(shortage/norm.capacity!):0;
   if(sections.length+additional>100)throw new BadRequestException('More than 100 sections would be required. Review the intake and capacity norms.');
   for(let index=0;sections.length<schoolClass.sections.filter((s:any)=>s.status==='ACTIVE').length+additional;index++){
-    let value=index+1,name='';while(value){value--;name=String.fromCharCode(65+value%26)+name;value=Math.floor(value/26);}
+    const name=sectionName(index,schoolClass.sections,naming);
     if(schoolClass.sections.some((s:any)=>s.name.toLowerCase()===name.toLowerCase()))continue;
     sections.push({key:'new-'+index,name,capacity:norm.maximum,usable:norm.capacity,occupied:0});
   }

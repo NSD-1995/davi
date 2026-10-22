@@ -74,3 +74,16 @@
 .migration-steps{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px;margin-block:16px}.migration-steps .button{white-space:normal;text-align:left;min-height:44px}.migration-steps [aria-current="step"]{box-shadow:0 0 0 2px var(--teal)}
 @media(max-width:720px){.migration-steps{grid-template-columns:repeat(2,minmax(0,1fr))}}
 @media(max-width:380px){.migration-steps{grid-template-columns:1fr}}
+
+/* Keep student identity visible while subjects scroll within the marks sheet. */
+.assessment-sheet{min-width:0;max-width:100%;--sheet-roll-width:64px;--sheet-admission-width:140px;--sheet-student-width:200px}
+.assessment-sheet-actions{margin-bottom:12px}
+.assessment-sheet-scroll{max-height:65vh;max-width:100%;overflow:auto;scrollbar-width:none;margin-right:0;border-radius:0}
+.assessment-sheet-scroll::-webkit-scrollbar{display:none}
+.assessment-sheet-scroll table{border-collapse:separate;border-spacing:0}
+.assessment-sheet-scroll .sheet-roll,.assessment-sheet-scroll .sheet-admission,.assessment-sheet-scroll .sheet-student{position:sticky;z-index:2;background:var(--white);box-sizing:border-box;white-space:normal;overflow-wrap:anywhere}
+.assessment-sheet-scroll .sheet-roll{left:0;min-width:var(--sheet-roll-width);width:var(--sheet-roll-width);max-width:var(--sheet-roll-width)}
+.assessment-sheet-scroll .sheet-admission{left:var(--sheet-roll-width);min-width:var(--sheet-admission-width);width:var(--sheet-admission-width);max-width:var(--sheet-admission-width)}
+.assessment-sheet-scroll .sheet-student{left:calc(var(--sheet-roll-width) + var(--sheet-admission-width));min-width:var(--sheet-student-width);width:var(--sheet-student-width);max-width:var(--sheet-student-width);box-shadow:2px 0 0 var(--line)}
+.assessment-sheet-scroll thead .sheet-roll,.assessment-sheet-scroll thead .sheet-admission,.assessment-sheet-scroll thead .sheet-student{background:#f8fafb}
+@media(max-width:760px){.assessment-sheet{--sheet-roll-width:44px;--sheet-admission-width:92px;--sheet-student-width:120px}.assessment-sheet-scroll .sheet-roll,.assessment-sheet-scroll .sheet-admission,.assessment-sheet-scroll .sheet-student{padding:10px 6px}}

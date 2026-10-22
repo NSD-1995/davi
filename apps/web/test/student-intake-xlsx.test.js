@@ -22,3 +22,23 @@ test('custom workbook columns can be mapped or explicitly ignored before preview
 test('mapping rejects duplicate targets and missing required fields',()=>{const parseCsv=load('student-intake-csv').parseStudentIntakeCsv;const csv='firstName,className,parentName,mobile,Other\nChild,Class 3,Parent,9876543210,Another';assert.throws(()=>parseCsv(csv,{Other:'firstName'}),/Multiple columns/);assert.throws(()=>parseCsv(csv,{firstName:'__ignore__',Other:'__ignore__'}),/Missing required/);});
 
 test('requested template preserves both parents, address and optional admission number',async()=>{const b=new Excel.Workbook();await b.xlsx.load(await template());b.worksheets[0].addRow(['','Child','31/12/2018','female','Class 3','Father','9876543210','Mother','9876543211','parent@example.com','Home address']);const rows=await parse(file(await b.xlsx.writeBuffer()));assert.equal(rows[0].admissionNumber,undefined);assert.equal(rows[0].fatherName,'Father');assert.equal(rows[0].motherMobile,'9876543211');assert.equal(rows[0].parentEmail,'parent@example.com');assert.equal(rows[0].address,'Home address');assert.equal(rows[0].gender,'FEMALE');});
+
+test('XLSX tables with producer-specific paths retain student cells and date styles',async()=>{
+ const b=new Excel.Workbook(),s=b.addWorksheet('Students');
+ s.addTable({name:'StudentsTable',ref:'A1',headerRow:true,columns:['Student Name','Class','Parent Name','Mobile','DOB'].map(name=>({name})),rows:[['Child','Class 3','Parent','9876543210',new Date('2018-12-31')]]});
+ s.getCell('E2').numFmt='dd/mm/yyyy';
+ const Zip=require('jszip'),zip=await Zip.loadAsync(await b.xlsx.writeBuffer());
+ zip.file('xl/tables/student-list.xml',await zip.file('xl/tables/table1.xml').async('string'));zip.remove('xl/tables/table1.xml');
+ const rel=zip.file('xl/worksheets/_rels/sheet1.xml.rels');zip.file(rel.name,(await rel.async('string')).replace('../tables/table1.xml','../tables/student-list.xml'));
+ const buffer=await zip.generateAsync({type:'nodebuffer'});
+ await assert.rejects(new Excel.Workbook().xlsx.load(buffer),/reading 'name'/);
+ const rows=await parse(file(buffer));assert.equal(rows.length,1);assert.equal(rows[0].firstName,'Child');assert.equal(rows[0].dateOfBirth,'2018-12-31');
+ const backendPath=path.join(__dirname,'../../backend/src/student-migration/compatible-workbook.ts');
+ assert.equal(fs.readFileSync(backendPath,'utf8').trim(),fs.readFileSync(path.join(__dirname,'../lib/compatible-workbook.ts'),'utf8').trim());
+});
+
+test('review mode keeps invalid DOB and missing row fields so other students can import',()=>{
+ const parseCsv=load('student-intake-csv').parseStudentIntakeCsv;
+ const csv='Student Name,Class,Parent Name,Mobile,DOB\nReady,Class 3,Parent,9876543210,31/12/2018\nNeeds correction,,Parent,9876543211,31/02/2018';
+ const rows=parseCsv(csv,{},true);assert.equal(rows.length,2);assert.equal(rows[0].dateOfBirth,'2018-12-31');assert.equal(rows[1].dateOfBirth,'31/02/2018');assert.equal(rows[1].className,undefined);
+});

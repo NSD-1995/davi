@@ -1,1 +1,5 @@
-import{Module}from'@nestjs/common';import{JwtModule}from'@nestjs/jwt';import{JwtAuthGuard}from'../auth/jwt-auth.guard';import{PermissionsGuard}from'../auth/permissions.guard';import{ExamsController}from'./exams.controller';import{ExamsService}from'./exams.service';@Module({imports:[JwtModule.register({secret:process.env.JWT_SECRET||'davi-super-secret-key',signOptions:{expiresIn:'7d'}})],controllers:[ExamsController],providers:[ExamsService,JwtAuthGuard,PermissionsGuard],exports:[ExamsService]})export class ExamsModule{}
+import { AiProviderService } from '../ai/ai-provider.service';
+import { AssessmentAiService } from './assessment-ai.service';
+import { AssessmentController } from './assessment.controller';
+import { AssessmentService } from './assessment.service';
+import{Module}from'@nestjs/common';import{JwtModule}from'@nestjs/jwt';import{JwtAuthGuard}from'../auth/jwt-auth.guard';import{PermissionsGuard}from'../auth/permissions.guard';import{ExamsController}from'./exams.controller';import{ExamsService}from'./exams.service';@Module({imports:[JwtModule.register({secret:process.env.JWT_SECRET||'davi-super-secret-key',signOptions:{expiresIn:'7d'}})],controllers:[ExamsController,AssessmentController],providers:[ExamsService,AssessmentService,AssessmentAiService,AiProviderService,JwtAuthGuard,PermissionsGuard],exports:[ExamsService]})export class ExamsModule{}

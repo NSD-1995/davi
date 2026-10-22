@@ -52,3 +52,17 @@ test('section proposal subtracts existing heterogeneous seats and honors reserva
  const policy={rules:[{academicYearId:'year',level:'ACADEMIC_LEVEL',target:'PRIMARY',maximum:30,reserved:2}]};
  const sections=sectionProposal(c,policy,45,{A:15});assert.equal(sections.length,2);assert.equal(sections[0].usable,18);assert.equal(sections[1].usable,28);assert.equal(sections[0].occupied,15);
 });
+
+test('section proposals follow numeric or alphabetic names and allow an admin choice',()=>{
+ const {sectionProposal}=require('../dist/student-admissions/capacity-rules');
+ const make=names=>({...c,sections:names.map((name,i)=>({id:'s'+i,name,status:'ACTIVE',capacity:25,updatedAt:new Date('2026-01-01')}))});
+ assert.deepEqual(sectionProposal(make(['1','2']),{defaultCapacity:25},75).map(s=>s.name),['1','2','3']);
+ assert.deepEqual(sectionProposal(make(['A','B']),{defaultCapacity:25},75).map(s=>s.name),['A','B','C']);
+ assert.deepEqual(sectionProposal(make(['1','2','A']),{defaultCapacity:25},100).map(s=>s.name),['1','2','A','3']);
+ assert.deepEqual(sectionProposal(make([]),{defaultCapacity:25},50,{},'NUMERIC').map(s=>s.name),['1','2']);
+ assert.deepEqual(sectionProposal(make(['1','2']),{defaultCapacity:25},75,{},'ALPHABETIC').map(s=>s.name),['1','2','A']);
+ const {sectionName}=require('../dist/student-admissions/section-naming');
+ assert.equal(sectionName(26,[],'ALPHABETIC'),'AA');
+ const fs=require('node:fs'),path=require('node:path');
+ assert.equal(fs.readFileSync(path.join(__dirname,'../src/student-admissions/section-naming.ts'),'utf8'),fs.readFileSync(path.join(__dirname,'../../web/lib/section-naming.ts'),'utf8'));
+});

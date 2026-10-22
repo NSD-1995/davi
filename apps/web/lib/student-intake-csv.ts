@@ -6,7 +6,7 @@ export function suggestIntakeField(heading:string){
  const aliases:Record<string,string>={firstname:'firstName',studentfirstname:'firstName',studentname:'firstName',fullname:'firstName',nameofstudent:'firstName',childname:'firstName',name:'firstName',lastname:'lastName',surname:'lastName',class:'className',classname:'className',grade:'className',standard:'className',std:'className',parentname:'parentName',guardianname:'parentName',parentguardianname:'parentName',fathername:'fatherName',fathersname:'fatherName',fathermobile:'fatherMobile',fathermobilenumber:'fatherMobile',mothername:'motherName',mothermobile:'motherMobile',mothermobilenumber:'motherMobile',admissionnumber:'admissionNumber',admissionno:'admissionNumber',parentemail:'parentEmail',email:'parentEmail',address:'address',mobile:'mobile',parentmobile:'mobile',mobilenumber:'mobile',mobileno:'mobile',contactnumber:'mobile',phone:'mobile',phonenumber:'mobile',dob:'dateOfBirth',dateofbirth:'dateOfBirth',birthdate:'dateOfBirth',gender:'gender',sex:'gender'};
  return aliases[key] || (/^extra\.[a-z][a-zA-Z0-9_]{0,40}$/.test(heading)?heading:'');
 }
-export function parseStudentIntakeCsv(source:string,mapping:Record<string,string>={}){
+export function parseStudentIntakeCsv(source:string,mapping:Record<string,string>={},allowInvalidRows=false){
  if(source.length>1000000)throw new Error('Upload a CSV smaller than 1 MB.');
  const records:string[][]=[];let row:string[]=[],cell='',quoted=false,closed=false;
  const input=source.replace(/^\uFEFF/,'');
@@ -40,8 +40,8 @@ export function parseStudentIntakeCsv(source:string,mapping:Record<string,string
   const data:any={extraFields:{}};
   headers.forEach((key,i)=>{if(key==='__ignore__')return;if(key.startsWith('extra.'))data.extraFields[key.slice(6)]=values[i];else if(values[i])data[key]=values[i];});
   data.parentName ||= data.fatherName || data.motherName;data.mobile ||= data.fatherMobile || data.motherMobile;if(data.gender)data.gender=data.gender.toUpperCase();
-  if(data.dateOfBirth){try{data.dateOfBirth=normalizeImportDate(data.dateOfBirth);}catch(e:any){throw new Error('Row '+(index+2)+' DOB: '+e.message);}}
-  if(required.some(key=>!data[key]))throw new Error('Row '+(index+2)+' is missing a required field.');
+  if(data.dateOfBirth){try{data.dateOfBirth=normalizeImportDate(data.dateOfBirth);}catch(e:any){if(!allowInvalidRows)throw new Error('Row '+(index+2)+' DOB: '+e.message);}}
+  if(!allowInvalidRows && required.some(key=>!data[key]))throw new Error('Row '+(index+2)+' is missing a required field.');
   return data;
  });
 }

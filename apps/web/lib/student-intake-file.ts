@@ -5,9 +5,9 @@ const headers=['Admission Number','Student Name','DOB','Gender','Class','Father 
 export async function intakeWorkbookTemplate(){
  const module=await import('exceljs');const Excel=module.default || module;const book=new Excel.Workbook();const sheet=book.addWorksheet('Students');sheet.addRow(headers);sheet.getRow(1).font={bold:true};sheet.columns.forEach(c=>{c.width=22;c.numFmt='@';});sheet.getCell('A1').note='Optional. Leave blank for DAVI to generate from the school short name at enrollment.';sheet.getCell('C1').note='Common date formats are accepted.';return book.xlsx.writeBuffer();
 }
-export async function parseStudentIntakeFile(file:Pick<File,'name'|'size'|'type'|'arrayBuffer'|'text'>,mapping:Record<string,string>={}){
+export async function parseStudentIntakeFile(file:Pick<File,'name'|'size'|'type'|'arrayBuffer'|'text'>,mapping:Record<string,string>={},allowInvalidRows=false){
  if(file.size>1000000)throw new Error('Upload a CSV or XLSX smaller than 1 MB.');
- if(/\.csv$/i.test(file.name))return parseStudentIntakeCsv(await file.text(),mapping);
+ if(/\.csv$/i.test(file.name))return parseStudentIntakeCsv(await file.text(),mapping,allowInvalidRows);
  if(!/\.xlsx$/i.test(file.name)|| (file.type && ![mime,'application/octet-stream','application/zip','application/vnd.ms-excel'].includes(file.type)))throw new Error('Choose a CSV or XLSX workbook.');
  const buffer=await file.arrayBuffer();const view=new DataView(buffer);
  if(buffer.byteLength<22||view.getUint32(0,true)!==0x04034b50)throw new Error('Invalid XLSX file signature.');
@@ -33,7 +33,7 @@ export async function parseStudentIntakeFile(file:Pick<File,'name'|'size'|'type'
    let text=value instanceof Date?value.toISOString().slice(0,10):value==null?'':typeof value==='object'&&'richText' in value?value.richText.map(t=>t.text).join(''):String(value);
    cells.push('"'+text.replace(/"/g,'""')+'"');
   }if(cells.some(c=>c!=='""'))lines.push(cells.join(','));});
-  if(lines.length)rows.push(...parseStudentIntakeCsv(lines.join('\n'),mapping));
+  if(lines.length)rows.push(...parseStudentIntakeCsv(lines.join('\n'),mapping,allowInvalidRows));
  }
  if(!rows.length||rows.length>500)throw new Error('Upload between 1 and 500 students at a time across all sheets.');return rows;
 }

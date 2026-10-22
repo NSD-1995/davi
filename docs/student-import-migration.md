@@ -217,3 +217,18 @@ A real scanner deployment and browser/mobile visual acceptance remain environmen
 checks. No browser was exposed by the computer-use tooling in this session; a
 browser tab could not be opened. Render tests are not a substitute for that check.
 No thousand-school or large-document load benchmark is claimed.
+
+## Direct student upload: partial imports
+
+The Upload Students & Generate Sections flow separates rows ready to import from
+rows needing correction. Missing fields, invalid dates, duplicates and class
+capacity errors exclude the affected rows; valid rows in other classes can still
+be approved. Confirmation shows the valid count, rechecks the preview and imports
+only those rows. Excluded rows remain in the upload editor for correction and a
+fresh preview. No sections are created for a class whose plan failed.
+
+Duplicate checks cover admission numbers within the upload and school/year,
+and student names with either parent's mobile in existing school/year enrollments.
+Repeated student rows in the same class are excluded. Confirmation repeats these
+checks in the existing serializable transaction; a replay of an already approved
+request returns its recorded result instead of enrolling the students again.

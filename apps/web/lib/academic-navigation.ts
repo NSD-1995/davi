@@ -6,6 +6,8 @@ export const academicNavigation: AcademicDestination[] = [
     { href: '/academics/classes', label: 'Classes & Sections', permission: 'CLASS_VIEW' },
     { href: '/academics/section-capacity', label: 'Section Capacity & Allocation', permission: 'STUDENT_VIEW' },
     { href: '/academics/groups', label: 'Academic Groups', permission: 'TIMETABLE_VIEW' },
+    { href: '/academics/holidays-events', label: 'Holidays & Important Events', permission: 'EVENT_VIEW' },
+    { href: '/academics/assessments', label: 'Assessment Setup', permission: 'ASSESSMENT_CONFIGURE' },
     { href: '/academics/subjects', label: 'Subjects', permission: 'SUBJECT_VIEW' },
     { href: '/people/teachers', label: 'Teaching Staff', permission: 'STAFF_VIEW' },
   ] },

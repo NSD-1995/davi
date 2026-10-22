@@ -13,6 +13,22 @@ async function request<T>(path: string, options: RequestInit = {}, token?: strin
   return body as T;
 }
 const json = (value: unknown) => JSON.stringify(value);
+export const assessmentApi={
+ terms:(t:string,q:Record<string,string>)=>request<any>('/assessments/terms?'+new URLSearchParams(q),{},t),
+ openTerm:(t:string,d:any)=>request<any>('/assessments/terms/open',{method:'POST',body:json(d)},t),
+ aiPolicy:(t:string)=>request<any>('/assessments/ai/policy',{},t),
+ saveAiPolicy:(t:string,d:any)=>request<any>('/assessments/ai/policy',{method:'POST',body:json(d)},t),
+ list:(t:string,q:Record<string,string>)=>request<any[]>('/assessments?'+new URLSearchParams(q),{},t),
+ patterns:(t:string,q:Record<string,string>)=>request<any>('/assessments/patterns?'+new URLSearchParams(q),{},t),
+ savePattern:(t:string,d:any)=>request<any>('/assessments/patterns',{method:'POST',body:json(d)},t),
+ create:(t:string,d:any)=>request<any>('/assessments',{method:'POST',body:json(d)},t),
+ detail:(t:string,id:string)=>request<any>(`/assessments/${id}`,{},t),
+ observations:(t:string,id:string,enrollmentId:string,page:number)=>request<any>(`/assessments/${id}/observations?${new URLSearchParams({enrollmentId,page:String(page)})}`,{},t),
+ action:(t:string,id:string,action:string,d:any)=>request<any>(`/assessments/${id}/${action}`,{method:'POST',body:json(d)},t),
+ parent:(t:string,id:string)=>request<any[]>(`/assessments/parent/${id}`,{},t),
+ download:async(t:string,id:string,parent=false)=>{const r=await fetch(`${API_URL}/assessments/${parent?'parent/':''}reports/${id}/pdf`,{headers:{Authorization:`Bearer ${t}`}});if(!r.ok)throw new ApiError(messageOf(await r.json().catch(()=>null)),r.status);const url=URL.createObjectURL(await r.blob()),a=document.createElement('a');a.href=url;a.download='DAVI-progress-card.pdf';a.click();URL.revokeObjectURL(url);},
+ consolidated:(t:string,id:string)=>request<any[]>(`/assessments/${id}/consolidated`,{},t),
+};
 const admissionQuery = (query: Record<string, unknown>) => new URLSearchParams(Object.entries(query).filter(([,value]) => value !== '' && value !== null && value !== undefined).map(([key,value]) => [key,String(value)])).toString();
 export const admissionsApi = {
   lookups: (t: string) => request<any>('/admissions/lookups', {}, t),
@@ -58,7 +74,7 @@ export const attendanceApi = {
   mark: (t:string,date:string,records:Array<{enrollmentId:string;status:string;remarks?:string}>) => request('/attendance/students',{method:'POST',body:json({date,records})},t),
 };
 export const examApi = { list: (t: string, yearId: string) => request<Record<string, unknown>[]>(`/exams?academicYearId=${yearId}`, {}, t), results: (t: string, examId: string, classId: string) => request<Record<string, unknown>[]>(`/exams/${examId}/results?classId=${classId}`, {}, t) };
-export const eventApi = { create: (t:string, data:Record<string,unknown>) => request('/events',{method:'POST',body:json(data)},t), list: (t: string) => request<Record<string, unknown>[]>('/events', {}, t) };
+export const eventApi = { update: (t:string, id:string, data:Record<string,unknown>) => request('/events/'+id,{method:'PATCH',body:json(data)},t), create: (t:string, data:Record<string,unknown>) => request('/events',{method:'POST',body:json(data)},t), list: (t: string) => request<Record<string, unknown>[]>('/events', {}, t) };
 export const reportApi = { students: (t: string, yearId: string, classId: string) => request<Record<string, unknown>[]>(`/reports/students?academicYearId=${yearId}&classId=${classId}`, {}, t) };
 export const schoolApi = {
   current: (t: string) => request<School>('/schools/me/profile', {}, t),
