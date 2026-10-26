@@ -37,6 +37,9 @@ enum ParentStatus {
 }
 
 model School {
+ analyticsSnapshots AnalyticsSnapshot[]
+ analyticsExports AnalyticsExportJob[]
+ analyticsAttentionCases AnalyticsAttentionCase[]
  assessmentPatterns AssessmentPattern[]
   studentImportJobs StudentImportJob[]
   admissionEnquiries AdmissionEnquiry[]
@@ -144,6 +147,10 @@ model RolePermission {
 }
 
 model User {
+ analyticsSnapshots AnalyticsSnapshot[]
+ analyticsExports AnalyticsExportJob[]
+ analyticsOwnedCases AnalyticsAttentionCase[]
+ analyticsCaseEvents AnalyticsCaseEvent[]
   @@unique([schoolId, email])
   @@unique([schoolId, username])
   @@index([email])
@@ -201,6 +208,7 @@ model UserRole {
 }
 
 model SchoolSetting {
+ analyticsPolicy Json?
  assessmentAiPolicy Json?
   studentImportPolicy Json?
   sectionCapacityPolicy Json?
@@ -224,7 +232,81 @@ model SchoolSetting {
 
 }
 
+model AnalyticsSnapshot {
+ school School @relation(fields:[schoolId],references:[id],onDelete:Cascade)
+ actor User @relation(fields:[actorId],references:[id],onDelete:Cascade)
+ id String @id @default(uuid())
+ schoolId String
+ actorId String
+ permissionKey String
+ filters Json
+ data Json
+ asOf DateTime @default(now())
+ expiresAt DateTime
+ @@index([schoolId,actorId,expiresAt])
+}
+
+model AnalyticsExportJob {
+ school School @relation(fields:[schoolId],references:[id],onDelete:Cascade)
+ actor User @relation(fields:[actorId],references:[id],onDelete:Cascade)
+ id String @id @default(uuid())
+ schoolId String
+ actorId String
+ snapshotId String
+ format String
+ template String
+ options Json
+ status String @default("QUEUED")
+ fileKey String?
+ size Int?
+ error String?
+ leaseToken String?
+ leaseUntil DateTime?
+ attempts Int @default(0)
+ createdAt DateTime @default(now())
+ updatedAt DateTime @updatedAt
+ expiresAt DateTime
+ @@index([schoolId,actorId,createdAt])
+ @@index([status,leaseUntil])
+}
+
+model AnalyticsAttentionCase {
+ school School @relation(fields:[schoolId],references:[id],onDelete:Cascade)
+ academicYear AcademicYear @relation(fields:[academicYearId],references:[id],onDelete:Restrict)
+ enrollment StudentEnrollment @relation(fields:[enrollmentId],references:[id],onDelete:Restrict)
+ owner User? @relation(fields:[ownerId],references:[id],onDelete:SetNull)
+ id String @id @default(uuid())
+ schoolId String
+ academicYearId String
+ enrollmentId String
+ indicator String
+ evidence Json
+ severity String
+ ownerId String?
+ status String @default("OPEN")
+ dueDate DateTime? @db.Date
+ revision Int @default(1)
+ createdAt DateTime @default(now())
+ updatedAt DateTime @updatedAt
+ events AnalyticsCaseEvent[]
+ @@unique([schoolId,academicYearId,enrollmentId,indicator],map:"AnalyticsAttentionCase_scope_key")
+ @@index([schoolId,academicYearId,status])
+}
+
+model AnalyticsCaseEvent {
+ actor User @relation(fields:[actorId],references:[id],onDelete:Restrict)
+ id String @id @default(uuid())
+ caseId String
+ actorId String
+ action String
+ note String
+ createdAt DateTime @default(now())
+ attentionCase AnalyticsAttentionCase @relation(fields:[caseId],references:[id],onDelete:Cascade)
+ @@index([caseId,createdAt])
+}
+
 model AcademicYear {
+ analyticsAttentionCases AnalyticsAttentionCase[]
  assessmentPatterns AssessmentPattern[]
   studentImportJobs StudentImportJob[]
   @@unique([id, schoolId])
@@ -470,6 +552,7 @@ model Student {
 }
 
 model StudentEnrollment {
+ analyticsAttentionCases AnalyticsAttentionCase[]
  @@unique([id,schoolId,academicYearId])
  assessmentObservations AssessmentObservation[]
  assessmentReports AssessmentReport[]
@@ -787,6 +870,7 @@ model PeriodTemplateAssignment {
 }
 
 model Homework {
+ @@index([schoolId,academicYearId,dueAt,status],map:"Homework_report_cohort_idx")
   id             String               @id @default(uuid())
   schoolId       String
   academicYearId String
@@ -937,8 +1021,8 @@ model ClassAnnouncement {
   id             String    @id @default(uuid())
   schoolId       String
   academicYearId String
-  classId        String
-  sectionId      String
+  classId        String?
+  sectionId      String?
   title          String
   message        String
   audience       String    @default("PARENTS_AND_STUDENTS")
@@ -1089,6 +1173,7 @@ model ExamSubject {
 }
 
 model StudentMark {
+ @@index([enrollmentId],map:"StudentMark_enrollmentId_idx")
  componentScores Json?
  assessmentState String @default("PRESENT")
  revision Int @default(1)

@@ -1,0 +1,10 @@
+﻿'use client';
+import { timetableCell, timetableDayNames, timetableDays, timetableSlots } from '../lib/timetable-presentation';
+export function TimetableMatrix({ plan, issues = [], label = 'Weekly timetable' }: { plan: any; issues?: any[]; label?: string }) {
+  const slots = timetableSlots(plan), days = timetableDays(plan);
+  if (!slots.length || !days.length) return <div className="tt-empty" role="status"><strong>Period template unavailable</strong><p>Configured periods and working days are needed to display this version accurately.</p></div>;
+  return <div className="tt-matrix-scroll" role="region" aria-label={label} tabIndex={0}><table className="tt-matrix" style={{ minWidth: 48 + slots.reduce((width, slot) => width + (['TEACHING','SUBJECT'].includes(slot.type) ? 104 : 72), 0) }}><caption className="tt-sr-only">{label}. Timings and working days follow the assigned period template.</caption><colgroup><col style={{ width: 48 }}/>{slots.map(slot=><col key={slot.id} style={['TEACHING','SUBJECT'].includes(slot.type)?undefined:{width:72}}/>)}</colgroup><thead><tr><th scope="col" className="tt-day-label">Day</th>{slots.map(slot => <th key={slot.id} scope="col" className={['TEACHING', 'SUBJECT'].includes(slot.type) ? '' : slot.type === 'ASSEMBLY' ? 'tt-slot-assembly' : 'tt-slot-break'}><span>{slot.name}</span><small>{slot.startTime}–{slot.endTime}</small></th>)}</tr></thead><tbody>{days.map(day => <tr key={day}><th scope="row" className="tt-day-label">{timetableDayNames[day] || `Day ${day}`}</th>{slots.map(slot => {
+    const cell = timetableCell(plan, slot, day), conflict = cell.conflict || issues.some(issue => issue.weekday === day && issue.periodSlotId === slot.id);
+    return <td key={slot.id} className={`tt-cell tt-cell-${cell.kind}${conflict ? ' tt-cell-conflict' : ''}`}><strong>{cell.subject}</strong>{cell.teacher && <span>{cell.teacher}</span>}{cell.room && <small>Room {cell.room}</small>}{conflict && <small className="tt-conflict-label">{cell.conflict ? String(cell.conflict).replace(/_/g, ' ').toLowerCase() : 'Conflict · review validation'}</small>}</td>;
+  })}</tr>)}</tbody></table></div>;
+}

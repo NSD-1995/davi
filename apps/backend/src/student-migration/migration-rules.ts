@@ -18,11 +18,11 @@ export function csvRecords(input:string,maxRows=20000):string[][]{
  for(let i=0;i<input.length;i++){const c=input[i];if(quoted){if(c==='"'){if(input[i+1]==='"'){cell+='"';i++;}else{quoted=false;closed=true;}}else cell+=c;continue;}if(c==='"'){if(cell || closed)throw new BadRequestException('Malformed CSV quotation.');quoted=true;continue;}if(c===delimiter||c==='\n'||c==='\r'){row.push(cell.trim());cell='';closed=false;if(c!==delimiter){if(c==='\r'&&input[i+1]==='\n')i++;if(row.some(Boolean))rows.push(row);if(rows.length>maxRows)throw new BadRequestException('CSV source row limit exceeded. Split the file.');row=[];}continue;}if(closed&&c.trim())throw new BadRequestException('Unexpected content after CSV quotation.');if(!closed)cell+=c;}
  if(quoted)throw new BadRequestException('Unclosed CSV quotation.');row.push(cell.trim());if(row.some(Boolean))rows.push(row);if(rows.length>maxRows)throw new BadRequestException('CSV source row limit exceeded. Split the file.');return rows;
 }
-export function tableRecords(records:string[][],source:string,page:number,confidence:number|null=1){
+export function tableRecords(records:string[][],source:string,page:number,confidence:number|null=1,headingMapping=suggestMapping){
  let headers:string[]=[],table=0;const output:any[]=[];
  for(const [index,cells]of records.entries()){
   if(!cells.some(Boolean))continue;
-  if(Object.keys(suggestMapping(cells)).length>=2){headers=cells.map((h,i)=>normalize(h)||'Column '+(i+1));table++;continue;}
+  if(Object.keys(headingMapping(cells)).length>=2){headers=cells.map((h,i)=>normalize(h)||'Column '+(i+1));table++;continue;}
   if(!headers.length){headers=cells.map((_,i)=>'Column '+(i+1));table++;}
   if(cells.every((c,i)=>normalize(c)===headers[i]))continue;
   const raw:any={},evidence:any={};cells.forEach((value,i)=>{const key=headers[i] || 'Column '+(i+1);if(key in raw)throw new BadRequestException('Duplicate source headings require correction: '+key);raw[key]=value;evidence[key]={sourceFile:source,page,table,row:index+1,original:value,extracted:value,confidence};});

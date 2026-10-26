@@ -2,9 +2,10 @@
 import {TeacherCheckIn} from './teacher-check-in';
 import {NotificationBell} from './notification-bell';
 import Link from 'next/link';
+import { ReportsNavigation } from './reports-navigation';
 import { AcademicNavigation } from './academic-navigation';
 import { AcademicBreadcrumbs } from './academic-breadcrumbs';
-import { PanelLeftClose, PanelLeftOpen, X } from 'lucide-react';
+import { PanelLeftClose, PanelLeftOpen, X, LayoutDashboard, School, Settings2, CalendarCheck, ClipboardCheck, CalendarClock, ListChecks, Users, ShieldCheck, UserPlus, MessageSquare, BellRing, FileText, GraduationCap, Upload, ArrowLeftRight, TrendingUp, Heart, LogOut, Menu } from 'lucide-react';
 import { usePathname } from 'next/navigation';
 import { Fragment, useEffect, useRef, useState, type ReactNode } from 'react';
 import { isSuperAdmin, useAuth } from '../lib/auth-context';
@@ -33,6 +34,24 @@ const schoolGroups = [
   { label: 'People', links: [{ href: '/people/parents', label: 'Parents', icon: '♥', permission: 'PARENT_VIEW' }] },
 ];
 
+const navigationIcons: Record<string, typeof School> = {
+  '/dashboard': LayoutDashboard, '/school/profile': School, '/school/settings': Settings2,
+  '/operations': LayoutDashboard, '/operations/attendance': CalendarCheck,
+  '/operations/attendance-settings': Settings2, '/operations/leave-policies': FileText,
+  '/operations/leave': CalendarClock, '/operations/duties': ListChecks,
+  '/operations/reports': ClipboardCheck, '/people/teacher-attendance': CalendarClock,
+  '/access/roles': ShieldCheck, '/people/staff': Users,
+  '/admissions/dashboard': LayoutDashboard, '/admissions/enquiries': MessageSquare,
+  '/admissions/follow-ups': BellRing, '/admissions/applications': UserPlus,
+  '/admissions/settings': Settings2, '/people/students': GraduationCap,
+  '/students/unassigned': Users, '/students/import-migration': Upload,
+  '/students/allocation': Users, '/students/transfers': ArrowLeftRight,
+  '/students/promotions': TrendingUp, '/people/parents': Heart,
+};
+function NavigationIcon({ href }: { href: string }) {
+  const Icon = navigationIcons[href] || School;
+  return <Icon size={18} aria-hidden="true"/>;
+}
 export function AppShell({ children }: { children: ReactNode }) {
   const path = usePathname();
   const { session, logout, can } = useAuth();
@@ -61,8 +80,8 @@ export function AppShell({ children }: { children: ReactNode }) {
       } }} className={open ? 'sidebar open' : 'sidebar'}>
       <div className="brand"><span className="brand-mark">D</span><div><strong>DAVI</strong><small>{platformAdmin ? 'Super Admin' : 'School Admin'}</small></div></div>
       <button className="sidebar-collapse" aria-label={compact ? 'Expand sidebar' : 'Collapse sidebar'} onClick={() => setCompact(!compact)}>{compact ? <PanelLeftOpen size={18}/> : <PanelLeftClose size={18}/>}</button><button className="sidebar-mobile-close" aria-label="Close navigation" onClick={() => setOpen(false)}><X size={20}/></button>
-      <nav aria-label="Primary">{groups.map(group => <Fragment key={group.label || 'main'}>{group.label === 'School Operations' && !platformAdmin && <AcademicNavigation path={path} onNavigate={() => setOpen(false)}/ >}<div className="nav-group">{group.label && <p>{group.label}</p>}{group.links.filter(link => (link.href==='/students/import-migration'?(can('students.import.view')||can('ADMISSIONS_MANAGE')):can(link.permission))&&(!link.href.startsWith('/admissions/')||can('ADMISSIONS_VIEW'))&&(!link.href.startsWith('/students/')||can('STUDENT_VIEW'))&&(link.href!=='/people/teacher-attendance'||can('STAFF_VIEW')||can('timetable.substitution.view'))).map(link => <Link key={link.href} title={link.label} aria-current={path === link.href ? 'page' : undefined} href={link.href} onClick={() => setOpen(false)} className={path === link.href ? 'active' : ''}><span>{link.icon}</span><span className="nav-label">{link.label}</span></Link>)}</div></Fragment>)}</nav>
-      <button className="logout" title="Logout" aria-label="Logout" onClick={logout}><span>↪</span> Logout</button>
+      <nav aria-label="Primary">{groups.map(group => <Fragment key={group.label || 'main'}>{group.label === 'School Operations' && !platformAdmin && <><AcademicNavigation path={path} onNavigate={() => setOpen(false)}/><ReportsNavigation path={path} onNavigate={()=>setOpen(false)}/></>}<div className="nav-group">{group.label && <p>{group.label}</p>}{group.links.filter(link => (link.href==='/students/import-migration'?(can('students.import.view')||can('ADMISSIONS_MANAGE')):can(link.permission))&&(!link.href.startsWith('/admissions/')||can('ADMISSIONS_VIEW'))&&(!link.href.startsWith('/students/')||can('STUDENT_VIEW'))&&(link.href!=='/people/teacher-attendance'||can('STAFF_VIEW')||can('timetable.substitution.view'))).map(link => <Link key={link.href} title={link.label} aria-current={path === link.href ? 'page' : undefined} href={link.href} onClick={() => setOpen(false)} className={path === link.href ? 'active' : ''}><NavigationIcon href={link.href}/><span className="nav-label">{link.label}</span></Link>)}</div></Fragment>)}</nav>
+      <button className="logout" title="Logout" aria-label="Logout" onClick={logout}><LogOut size={18} aria-hidden="true"/><span className="nav-label">Logout</span></button>
     </aside>
     <div className="main-column">
       <header className="topbar"><button className="menu-button" aria-label="Open navigation" aria-expanded={open} aria-controls="primary-sidebar" onClick={() => setOpen(true)}>☰</button><div className="school-title"><strong>{platformAdmin ? 'DAVI Platform' : school?.name || 'Your School'}</strong><small>{platformAdmin ? 'Super Admin Portal' : 'Administration Portal'}</small></div><div className="topbar-actions"><TeacherCheckIn/><NotificationBell/>{!platformAdmin && <AcademicYearSelector />}<div className="avatar">{(session?.user.firstName?.[0] || 'U').toUpperCase()}</div><div className="user-name"><strong>{name || (platformAdmin ? 'Super Admin' : 'School Admin')}</strong><small>{session?.roles[0]?.name || 'User'}</small></div><button className="icon-button" onClick={logout} title="Logout">↪</button></div></header>

@@ -87,3 +87,19 @@
 .assessment-sheet-scroll .sheet-student{left:calc(var(--sheet-roll-width) + var(--sheet-admission-width));min-width:var(--sheet-student-width);width:var(--sheet-student-width);max-width:var(--sheet-student-width);box-shadow:2px 0 0 var(--line)}
 .assessment-sheet-scroll thead .sheet-roll,.assessment-sheet-scroll thead .sheet-admission,.assessment-sheet-scroll thead .sheet-student{background:#f8fafb}
 @media(max-width:760px){.assessment-sheet{--sheet-roll-width:44px;--sheet-admission-width:92px;--sheet-student-width:120px}.assessment-sheet-scroll .sheet-roll,.assessment-sheet-scroll .sheet-admission,.assessment-sheet-scroll .sheet-student{padding:10px 6px}}
+
+/* Shared sidebar rhythm and report navigation. */
+.sidebar{padding:20px 12px 14px}
+.sidebar nav{min-height:0;scrollbar-width:thin;scrollbar-color:#52677b transparent;overscroll-behavior:contain}
+.sidebar nav::-webkit-scrollbar{width:5px}
+.sidebar nav::-webkit-scrollbar-thumb{background:#52677b;border-radius:8px}
+.sidebar .brand{padding:0 8px 18px}
+.sidebar .nav-group{margin-bottom:22px}
+.sidebar .nav-group>p{color:#8fa7ba;font-size:.62rem;letter-spacing:.14em;margin:0 12px 9px}
+.sidebar .nav-group a,.sidebar .nav-disclosure{min-height:40px;padding:10px 11px;gap:10px;font-size:.8rem;line-height:1.4}
+.sidebar .nav-group svg,.sidebar .logout svg{flex-shrink:0;stroke-width:1.8}
+.sidebar .nav-label{min-width:0}
+.sidebar .nav-group a.active{background:#0b8f832b;color:#a5f0e6;box-shadow:inset 3px 0 #2fc3b0}
+.sidebar .academic-nav-children{margin:4px 0 8px 19px;padding-left:8px;border-color:#ffffff18}
+.sidebar .academic-nav-children a{min-height:35px;padding:8px 10px;font-size:.75rem}
+.sidebar-collapse:hover,.sidebar-mobile-close:hover{background:#ffffff12;color:#fff}

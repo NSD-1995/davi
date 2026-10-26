@@ -60,7 +60,7 @@ export const authApi = {
   me: (token: string) => request<{ user: User; roles: Array<{ id: string; name: string; code: string }>; permissions: string[] }>('/auth/me', {}, token),
   changePassword: (token: string, currentPassword: string, newPassword: string) => request<{ message: string; user: User }>('/auth/change-password', { method: 'POST', body: json({ currentPassword, newPassword }) }, token),
 };
-export const dashboardApi = { me: (t:string)=>request<MyDashboard>('/dashboard/me',{},t), summary: (t: string) => request<DashboardSummary>('/dashboard/summary', {}, t) };
+export const dashboardApi = { command:(t:string,yearId?:string)=>request<any>('/dashboard/command-center'+(yearId?'?'+new URLSearchParams({academicYearId:yearId}):''),{cache:'no-store'},t), me: (t:string)=>request<MyDashboard>('/dashboard/me',{},t), summary: (t: string) => request<DashboardSummary>('/dashboard/summary', {}, t) };
 export const schoolSettingsApi = {
   get: (t: string, schoolId: string) => request<Record<string, unknown>>(`/school-settings/schools/${schoolId}`, {}, t),
   save: (t: string, data: Record<string, unknown>) => request<Record<string, unknown>>('/school-settings', { method: 'POST', body: json(data) }, t),
@@ -74,7 +74,9 @@ export const attendanceApi = {
   mark: (t:string,date:string,records:Array<{enrollmentId:string;status:string;remarks?:string}>) => request('/attendance/students',{method:'POST',body:json({date,records})},t),
 };
 export const examApi = { list: (t: string, yearId: string) => request<Record<string, unknown>[]>(`/exams?academicYearId=${yearId}`, {}, t), results: (t: string, examId: string, classId: string) => request<Record<string, unknown>[]>(`/exams/${examId}/results?classId=${classId}`, {}, t) };
-export const eventApi = { update: (t:string, id:string, data:Record<string,unknown>) => request('/events/'+id,{method:'PATCH',body:json(data)},t), create: (t:string, data:Record<string,unknown>) => request('/events',{method:'POST',body:json(data)},t), list: (t: string) => request<Record<string, unknown>[]>('/events', {}, t) };
+export const eventApi = {
+ importEvents:(t:string,rows:Record<string,unknown>[])=>request<any[]>('/events/import',{method:'POST',body:json({rows})},t),
+ previewImport:async(t:string,file:File)=>{const form=new FormData();form.append('file',file);const response=await fetch(API_URL+'/events/import/preview',{method:'POST',headers:{Authorization:'Bearer '+t},body:form});const body=await response.json();if(!response.ok)throw new ApiError(messageOf(body),response.status);return body as {rows:Record<string,string>[];mapping:Record<string,string>};}, update: (t:string, id:string, data:Record<string,unknown>) => request('/events/'+id,{method:'PATCH',body:json(data)},t), create: (t:string, data:Record<string,unknown>) => request('/events',{method:'POST',body:json(data)},t), list: (t: string) => request<Record<string, unknown>[]>('/events', {}, t) };
 export const reportApi = { students: (t: string, yearId: string, classId: string) => request<Record<string, unknown>[]>(`/reports/students?academicYearId=${yearId}&classId=${classId}`, {}, t) };
 export const schoolApi = {
   current: (t: string) => request<School>('/schools/me/profile', {}, t),
@@ -119,6 +121,7 @@ const classroomPath=(y:string,c:string,s:string)=>`/academic-years/${y}/classes/
 export const classroomManagementApi={
   homework:(t:string,y:string,c:string,s:string)=>request<any[]>(`${classroomPath(y,c,s)}/homework`,{},t),
   createHomework:(t:string,y:string,c:string,s:string,d:any)=>request(`${classroomPath(y,c,s)}/homework`,{method:'POST',body:json(d)},t),
+  remindHomework:(t:string,y:string,c:string,s:string,id:string,submissionIds:string[])=>request<{sent:number;alreadyReminded:number;completedSkipped:number}>(`${classroomPath(y,c,s)}/homework/${id}/reminders`,{method:'POST',body:json({submissionIds})},t),
   updateHomework:(t:string,y:string,c:string,s:string,id:string,d:any)=>request(`${classroomPath(y,c,s)}/homework/${id}`,{method:'PATCH',body:json(d)},t),
   lessons:(t:string,y:string,c:string,s:string)=>request<any[]>(`${classroomPath(y,c,s)}/lesson-plans`,{},t),
   createLesson:(t:string,y:string,c:string,s:string,d:any)=>request(`${classroomPath(y,c,s)}/lesson-plans`,{method:'POST',body:json(d)},t),
@@ -249,4 +252,28 @@ export const studentMigrationApi = {
  policy:(t:string,body:unknown)=>request<any>('/student-migrations/policy',{method:'PUT',body:json(body)},t),
  upload:async(t:string,id:string,files:File[])=>{const form=new FormData();files.forEach(file=>form.append('files',file));const response=await fetch(`${API_URL}/student-migrations/${id}/files`,{method:'POST',headers:{Authorization:'Bearer '+t},body:form});const body=await response.json();if(!response.ok)throw new ApiError(messageOf(body),response.status);return body;},
  download:async(t:string,path:string,name:string)=>{const response=await fetch(`${API_URL}/student-migrations/${path}`,{headers:{Authorization:'Bearer '+t}});if(!response.ok)throw new ApiError(messageOf(await response.json()),response.status);const url=URL.createObjectURL(await response.blob()),a=document.createElement('a');a.href=url;a.download=name;a.click();URL.revokeObjectURL(url);},
+};
+
+export const announcementsApi={
+ list:(t:string,year:string)=>request<any[]>('/announcements?'+new URLSearchParams({academicYearId:year}),{},t),
+ targets:(t:string,year:string)=>request<Array<{id:string;name:string;sections:Array<{id:string;name:string}>}>>('/announcements/targets?'+new URLSearchParams({academicYearId:year}),{},t),
+ save:(t:string,data:Record<string,unknown>,id?:string)=>request<any>('/announcements'+(id?'/'+id:''),{method:id?'PATCH':'POST',body:json(data)},t),
+};
+
+export const analyticsApi={
+ table:(t:string,id:string,key:string,page:number)=>request<any>('/reports/analytics/snapshots/'+id+'/table?'+new URLSearchParams({key,page:String(page)}),{},t),
+ students:(t:string,filters:Record<string,string>)=>request<any[]>('/reports/analytics/students?'+new URLSearchParams(filters),{},t),
+ options:(t:string,y:string)=>request<any>('/reports/analytics/options?'+new URLSearchParams({academicYearId:y}),{},t),
+ snapshot:(t:string,filters:Record<string,unknown>,refresh=false)=>request<any>('/reports/analytics/snapshots',{method:'POST',body:json({filters,refresh})},t),
+ page:(t:string,id:string,page:number)=>request<any>('/reports/analytics/snapshots/'+id+'/students?page='+page,{},t),
+ cases:(t:string,filters:Record<string,string>)=>request<any[]>('/reports/analytics/attention?'+new URLSearchParams(filters),{},t),
+ createCase:(t:string,d:any)=>request<any>('/reports/analytics/attention',{method:'POST',body:json(d)},t),
+ updateCase:(t:string,id:string,d:any)=>request<any>('/reports/analytics/attention/'+id,{method:'PATCH',body:json(d)},t),
+ policy:(t:string,academicYearId:string,policy:any)=>request<any>('/reports/analytics/policy',{method:'PUT',body:json({academicYearId,policy})},t),
+ export:(t:string,d:any)=>request<any>('/reports/analytics/exports',{method:'POST',body:json(d)},t),
+ jobs:(t:string)=>request<any[]>('/reports/analytics/exports',{},t),
+ jobAction:(t:string,id:string,action:string)=>request<any>('/reports/analytics/exports/'+id+'/action',{method:'POST',body:json({action})},t),
+ download:async(t:string,id:string)=>{const ticket=await request<any>('/reports/analytics/exports/'+id+'/ticket',{method:'POST'},t);const response=await fetch(API_URL+ticket.path+'?token='+encodeURIComponent(ticket.token),{headers:{Authorization:'Bearer '+t}});if(!response.ok)throw new Error(messageOf(await response.json().catch(()=>null)));const url=URL.createObjectURL(await response.blob()),link=document.createElement('a');link.href=url;link.download=response.headers.get('Content-Disposition')?.match(/filename="([^"]+)"/)?.[1]||'DAVI-report';link.click();setTimeout(()=>URL.revokeObjectURL(url),1000);},
+ insights:(t:string,snapshotId:string)=>request<any>('/reports/analytics/insights',{method:'POST',body:json({snapshotId})},t),
+ approveInsight:(t:string,id:string)=>request<any>('/reports/analytics/insights/'+id+'/approve',{method:'POST'},t),
 };

@@ -3,8 +3,9 @@ import { JwtAuthGuard } from '../auth/jwt-auth.guard';import { PermissionsGuard 
 @Controller('academic-years/:yearId/classes/:classId/sections/:sectionId') @UseGuards(JwtAuthGuard,PermissionsGuard)
 export class ClassroomManagementController{constructor(private s:S){}
 @Get('homework')@RequirePermissions('HOMEWORK_VIEW') homework(@Req()r:any,@Param()p:any){return this.s.homework(r.user.schoolId,p)}
-@Post('homework')@RequirePermissions('HOMEWORK_MANAGE') createHomework(@Req()r:any,@Param()p:any,@Body()d:any){return this.s.createHomework(r.user.schoolId,p,d)}
-@Patch('homework/:id')@RequirePermissions('HOMEWORK_MANAGE') updateHomework(@Req()r:any,@Param()p:any,@Body()d:any){return this.s.updateHomework(r.user.schoolId,p,d)}
+@Post('homework')@RequirePermissions('HOMEWORK_MANAGE') createHomework(@Req()r:any,@Param()p:any,@Body()d:any){return this.s.createHomework(r.user.schoolId,p,d,r.user)}
+@Patch('homework/:id')@RequirePermissions('HOMEWORK_MANAGE') updateHomework(@Req()r:any,@Param()p:any,@Body()d:any){return this.s.updateHomework(r.user.schoolId,p,d,r.user)}
+@Post('homework/:id/reminders')@RequirePermissions('HOMEWORK_MANAGE') remindHomework(@Req()r:any,@Param()p:any,@Body()d:any){return this.s.remindHomework(r.user.schoolId,p,d,r.user)}
 @Get('lesson-plans')@RequirePermissions('LESSON_PLAN_VIEW') lessons(@Req()r:any,@Param()p:any){return this.s.lessons(r.user.schoolId,p)}
 @Post('lesson-plans')@RequirePermissions('LESSON_PLAN_MANAGE') createLesson(@Req()r:any,@Param()p:any,@Body()d:any){return this.s.createLesson(r.user.schoolId,p,d)}
 @Patch('lesson-plans/:id')@RequirePermissions('LESSON_PLAN_APPROVE') updateLesson(@Req()r:any,@Param()p:any,@Body()d:any){return this.s.updateLesson(r.user.schoolId,p,d)}

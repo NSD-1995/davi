@@ -13,7 +13,7 @@ pretend that extracted documents are approved admissions applications.
    keys and are not served statically.
 2. Queue extraction. Every source must pass malware scanning. Deterministic CSV
    and ExcelJS parsing handles spreadsheets; PDF.js extracts positioned text.
-   Opt-in local Tesseract OCR handles scanned PDFs/images, including rotation
+   Automatic local Tesseract OCR handles scanned PDFs/images, including rotation
    trials. Extraction never queues a commit.
 3. Review automatically suggested column mappings. Ambiguous heading suggestions
    are left unmapped. Use per-file overrides when the same heading has different
@@ -125,7 +125,7 @@ per-row commit, section approval, rollback and source expiry. Logs contain job/r
 IDs and error categories, not source text. Error reports protect CSV formula cells.
 API usage totals are school scoped. Extraction is local-only: no cloud AI provider
 is enabled, documents are never sent to an LLM, and inputTokens/outputTokens/costMinor
-remain zero. Local OCR requires explicit opt-in for each extraction request.
+remain zero. Text recognition runs automatically when a source image or PDF page needs it. The legacy localOcr request field is accepted for compatibility but no longer disables recognition, including for older saved jobs.
 
 ## Deployment
 
