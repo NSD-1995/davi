@@ -1,6 +1,6 @@
 'use client';
 import {useEffect,useState} from 'react';
-import Link from 'next/link';
+import Link from '../lib/school-navigation';
 import {ApiError,classWorkspaceApi,periodTemplateApi,timetableRulesApi} from '../lib/api';
 import {useAuth} from '../lib/auth-context';
 import {TimetableResult} from './timetable-result';

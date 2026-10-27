@@ -83,7 +83,7 @@ function captureUI({page=false,api={},exports={},confirm=true}={}){
  const fs=require('fs'),path=require('path'),ts=require('typescript');
  const file=page?'app/(admin)/academics/timetables/page.tsx':'components/timetable-planner.tsx';
  const source=fs.readFileSync(path.join(__dirname,'../',file),'utf8');
- const compiled=ts.transpileModule(source,{compilerOptions:{module:ts.ModuleKind.CommonJS,jsx:ts.JsxEmit.ReactJSX}}).outputText;const component={};
+ const compiled=require('./school-navigation-test-support').transpileModule(source,{compilerOptions:{module:ts.ModuleKind.CommonJS,jsx:ts.JsxEmit.ReactJSX}}).outputText;const component={};
  const base=file.startsWith('app/')?'../../../../':'../';
  const req=name=>{
   if(name==='react')return react;

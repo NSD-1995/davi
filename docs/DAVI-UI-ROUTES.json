@@ -1,0 +1,1099 @@
+[
+  {
+    "route": "/academics/academic-planner",
+    "source": "apps/web/app/(admin)/academics/academic-planner/page.tsx",
+    "gate": "LESSON_PLAN_VIEW",
+    "imports": [
+      "next/link",
+      "react",
+      "../../../../lib/auth-context",
+      "../../../../lib/academic-year-context",
+      "../../../../lib/api",
+      "../../../../components/ui",
+      "../../../../lib/types"
+    ],
+    "permissions": [
+      "LESSON_PLAN_MANAGE",
+      "REPORT_VIEW",
+      "LESSON_PLAN_APPROVE",
+      "LESSON_PLAN_MANAGE",
+      "LESSON_PLAN_APPROVE",
+      "LESSON_PLAN_MANAGE",
+      "LESSON_PLAN_MANAGE",
+      "LESSON_PLAN_MANAGE",
+      "LESSON_PLAN_APPROVE",
+      "LESSON_PLAN_MANAGE",
+      "LESSON_PLAN_MANAGE",
+      "HOMEWORK_MANAGE",
+      "EXAM_CREATE",
+      "HOMEWORK_MANAGE",
+      "EXAM_UPDATE",
+      "MARKS_UPDATE",
+      "LESSON_PLAN_MANAGE",
+      "LESSON_PLAN_MANAGE",
+      "COMMUNICATION_MANAGE",
+      "COMMUNICATION_MANAGE",
+      "COMMUNICATION_MANAGE"
+    ],
+    "apiCalls": [
+      "classApi.list",
+      "classApi.assignedSubjects"
+    ],
+    "inlineStyles": 25,
+    "tables": 1,
+    "forms": 0
+  },
+  {
+    "route": "/academics/academic-years",
+    "source": "apps/web/app/(admin)/academics/academic-years/page.tsx",
+    "gate": "ACADEMIC_YEAR_VIEW",
+    "imports": [
+      "react",
+      "../../../../lib/api",
+      "../../../../lib/auth-context",
+      "../../../../lib/academic-year-context",
+      "../../../../lib/toast-context",
+      "../../../../components/ui",
+      "../../../../lib/types"
+    ],
+    "permissions": [],
+    "apiCalls": [
+      "academicYearApi.create",
+      "academicYearApi.update"
+    ],
+    "inlineStyles": 0,
+    "tables": 1,
+    "forms": 1
+  },
+  {
+    "route": "/academics/ai-lesson-plans",
+    "source": "apps/web/app/(admin)/academics/ai-lesson-plans/page.tsx",
+    "gate": "LESSON_PLAN_VIEW",
+    "imports": [
+      "react",
+      "../../../../lib/auth-context",
+      "../../../../lib/academic-year-context",
+      "../../../../lib/api",
+      "../../../../lib/types",
+      "../../../../components/ui"
+    ],
+    "permissions": [],
+    "apiCalls": [
+      "classApi.list",
+      "classApi.assignedSubjects"
+    ],
+    "inlineStyles": 6,
+    "tables": 0,
+    "forms": 2
+  },
+  {
+    "route": "/academics/announcements",
+    "source": "apps/web/app/(admin)/academics/announcements/page.tsx",
+    "gate": "COMMUNICATION_VIEW",
+    "imports": [
+      "react",
+      "../../../../lib/api",
+      "../../../../lib/auth-context",
+      "../../../../lib/academic-year-context",
+      "../../../../components/ui"
+    ],
+    "permissions": [
+      "COMMUNICATION_MANAGE",
+      "COMMUNICATION_VIEW"
+    ],
+    "apiCalls": [
+      "announcementsApi.list",
+      "announcementsApi.targets",
+      "announcementsApi.save"
+    ],
+    "inlineStyles": 1,
+    "tables": 1,
+    "forms": 1
+  },
+  {
+    "route": "/academics/assessments",
+    "source": "apps/web/app/(admin)/academics/assessments/page.tsx",
+    "gate": "Page/component and API checks",
+    "imports": [
+      "react",
+      "../../../../components/assessment-workspace",
+      "../../../../components/assessment-assistance",
+      "../../../../lib/api",
+      "../../../../lib/auth-context",
+      "../../../../lib/academic-year-context",
+      "../../../../components/ui",
+      "../../../../lib/types"
+    ],
+    "permissions": [
+      "ASSESSMENT_CONFIGURE"
+    ],
+    "apiCalls": [
+      "classWorkspaceApi.list",
+      "subjectApi.list"
+    ],
+    "inlineStyles": 0,
+    "tables": 0,
+    "forms": 0
+  },
+  {
+    "route": "/academics/classes",
+    "source": "apps/web/app/(admin)/academics/classes/page.tsx",
+    "gate": "CLASS_VIEW",
+    "imports": [
+      "../../../../components/classes-table",
+      "../../../../lib/school-academic-groups-context",
+      "../../../../lib/academic-groups",
+      "react",
+      "../../../../lib/api",
+      "../../../../lib/auth-context",
+      "../../../../lib/academic-year-context",
+      "../../../../lib/toast-context",
+      "../../../../components/ui",
+      "../../../../lib/types",
+      "+parent.name+"
+    ],
+    "permissions": [
+      "CLASS_SUBJECT_MANAGE",
+      "CLASS_SUBJECT_MANAGE"
+    ],
+    "apiCalls": [
+      "classApi.list",
+      "subjectApi.list",
+      "classApi.assignedSubjects",
+      "classApi.update",
+      "classApi.create",
+      "classApi.replaceSubjects",
+      "sectionApi.update",
+      "sectionApi.create",
+      "classApi.bulk",
+      "classApi.remove",
+      "sectionApi.remove"
+    ],
+    "inlineStyles": 0,
+    "tables": 0,
+    "forms": 3
+  },
+  {
+    "route": "/academics/groups",
+    "source": "apps/web/app/(admin)/academics/groups/page.tsx",
+    "gate": "TIMETABLE_VIEW",
+    "imports": [
+      "../../../../lib/school-academic-groups-context",
+      "next/link",
+      "react",
+      "../../../../lib/academic-groups",
+      "../../../../lib/teaching-responsibilities",
+      "../../../../lib/api",
+      "../../../../lib/auth-context",
+      "../../../../lib/academic-year-context",
+      "../../../../components/ui",
+      "../../../../components/group-responsibility-table",
+      "../../../../components/timetable-result"
+    ],
+    "permissions": [
+      "STAFF_UPDATE",
+      "TIMETABLE_UPDATE",
+      "TIMETABLE_GENERATE",
+      "SUBJECT_UPDATE",
+      "SUBJECT_UPDATE"
+    ],
+    "apiCalls": [
+      "timetableRulesApi.groupWorkspace",
+      "timetableRulesApi.saveGroupWorkspace",
+      "timetableRulesApi.classifyGroupSubjects",
+      "timetableRulesApi.generate"
+    ],
+    "inlineStyles": 0,
+    "tables": 1,
+    "forms": 0
+  },
+  {
+    "route": "/academics/holidays-events",
+    "source": "apps/web/app/(admin)/academics/holidays-events/page.tsx",
+    "gate": "Page/component and API checks",
+    "imports": [
+      "react",
+      "../../../../lib/api",
+      "../../../../lib/auth-context",
+      "../../../../components/ui",
+      "../../../../components/event-import"
+    ],
+    "permissions": [
+      "EVENT_VIEW",
+      "EVENT_MANAGE",
+      "EVENT_VIEW",
+      "EVENT_MANAGE",
+      "EVENT_MANAGE",
+      "EVENT_MANAGE",
+      "EVENT_MANAGE"
+    ],
+    "apiCalls": [
+      "eventApi.list",
+      "eventApi.update",
+      "eventApi.create"
+    ],
+    "inlineStyles": 0,
+    "tables": 1,
+    "forms": 2
+  },
+  {
+    "route": "/academics/period-templates",
+    "source": "apps/web/app/(admin)/academics/period-templates/page.tsx",
+    "gate": "PERIOD_TEMPLATE_VIEW",
+    "imports": [],
+    "permissions": [
+      "PERIOD_TEMPLATE_ACTIVATE",
+      "PERIOD_TEMPLATE_UPDATE",
+      "PERIOD_TEMPLATE_CREATE"
+    ],
+    "apiCalls": [
+      "periodTemplateApi.list",
+      "classApi.list",
+      "periodTemplateApi.remove",
+      "periodTemplateApi.get",
+      "periodTemplateApi.status",
+      "periodTemplateApi.preview",
+      "periodTemplateApi.update",
+      "periodTemplateApi.create",
+      "periodTemplateApi.assign",
+      "periodTemplateApi.unassign"
+    ],
+    "inlineStyles": 0,
+    "tables": 2,
+    "forms": 1
+  },
+  {
+    "route": "/academics/section-capacity",
+    "source": "apps/web/app/(admin)/academics/section-capacity/page.tsx",
+    "gate": "Page/component and API checks",
+    "imports": [
+      "../../../../components/enrollment-planner"
+    ],
+    "permissions": [],
+    "apiCalls": [],
+    "inlineStyles": 0,
+    "tables": 0,
+    "forms": 0
+  },
+  {
+    "route": "/academics/subjects",
+    "source": "apps/web/app/(admin)/academics/subjects/page.tsx",
+    "gate": "SUBJECT_VIEW",
+    "imports": [
+      "../../../../lib/school-academic-groups-context",
+      "../../../../components/academic-group-picker",
+      "../../../../lib/academic-groups",
+      "react",
+      "../../../../lib/api",
+      "../../../../lib/auth-context",
+      "../../../../lib/academic-year-context",
+      "../../../../lib/toast-context",
+      "../../../../components/ui",
+      "../../../../lib/types"
+    ],
+    "permissions": [],
+    "apiCalls": [
+      "subjectApi.list",
+      "academicYearApi.assignedSubjects",
+      "subjectApi.create",
+      "subjectApi.update",
+      "academicYearApi.assignSubjects",
+      "academicYearApi.removeSubject",
+      "subjectApi.remove"
+    ],
+    "inlineStyles": 0,
+    "tables": 0,
+    "forms": 1
+  },
+  {
+    "route": "/academics/timetable-settings",
+    "source": "apps/web/app/(admin)/academics/timetable-settings/page.tsx",
+    "gate": "TIMETABLE_VIEW",
+    "imports": [
+      "../../../../lib/school-academic-groups-context",
+      "../../../../lib/teaching-responsibilities",
+      "../../../../lib/academic-groups",
+      "next/link",
+      "react",
+      "../../../../lib/api",
+      "../../../../lib/auth-context",
+      "../../../../lib/academic-year-context",
+      "../../../../components/ui"
+    ],
+    "permissions": [
+      "TIMETABLE_UPDATE",
+      "CLASS_SUBJECT_MANAGE",
+      "TIMETABLE_UPDATE",
+      "CLASS_SUBJECT_MANAGE",
+      "TIMETABLE_UPDATE",
+      "CLASS_SUBJECT_MANAGE"
+    ],
+    "apiCalls": [
+      "timetableRulesApi.simple",
+      "timetableRulesApi.saveSimple"
+    ],
+    "inlineStyles": 0,
+    "tables": 1,
+    "forms": 0
+  },
+  {
+    "route": "/academics/timetables",
+    "source": "apps/web/app/(admin)/academics/timetables/page.tsx",
+    "gate": "TIMETABLE_VIEW",
+    "imports": [
+      "next/link",
+      "react",
+      "lucide-react",
+      "../../../../lib/school-academic-groups-context",
+      "../../../../lib/auth-context",
+      "../../../../lib/academic-year-context",
+      "../../../../lib/api",
+      "../../../../lib/timetable-overview",
+      "../../../../lib/timetable-presentation",
+      "../../../../lib/timetable-export",
+      "../../../../components/ui",
+      "../../../../components/timetable-planner",
+      "../../../../components/timetable-navigator",
+      "../../../../components/timetable-drawer",
+      "../../../../components/timetable-result"
+    ],
+    "permissions": [
+      "TIMETABLE_VIEW",
+      "TIMETABLE_GENERATE",
+      "TIMETABLE_GENERATE",
+      "TIMETABLE_PUBLISH",
+      "TIMETABLE_UPDATE"
+    ],
+    "apiCalls": [
+      "classWorkspaceApi.list",
+      "timetablePlanningApi.allPlans",
+      "timetableRulesApi.generate",
+      "timetableRulesApi.validate",
+      "timetablePlanningApi.publishAll",
+      "timetablePlanningApi.removeAll"
+    ],
+    "inlineStyles": 0,
+    "tables": 0,
+    "forms": 0
+  },
+  {
+    "route": "/academics/workspace",
+    "source": "apps/web/app/(admin)/academics/workspace/page.tsx",
+    "gate": "CLASS_VIEW",
+    "imports": [
+      "next/link",
+      "react",
+      "../../../../components/workspace-loading",
+      "../../../../components/workspace-class-list",
+      "../../../../lib/api",
+      "../../../../lib/academic-year-context",
+      "../../../../lib/auth-context",
+      "../../../../components/ui",
+      "../../../../lib/types"
+    ],
+    "permissions": [
+      "STUDENT_VIEW"
+    ],
+    "apiCalls": [
+      "classWorkspaceApi.list"
+    ],
+    "inlineStyles": 0,
+    "tables": 0,
+    "forms": 0
+  },
+  {
+    "route": "/academics/workspace/[classId]/sections/[sectionId]",
+    "source": "apps/web/app/(admin)/academics/workspace/[classId]/sections/[sectionId]/page.tsx",
+    "gate": "CLASS_VIEW",
+    "imports": [
+      "../../../../../../../components/analytics-workspace",
+      "../../../../../../../components/homework-analysis",
+      "../../../../../../../components/class-assessment-assistance",
+      "../../../../../../../components/assessment-workspace",
+      "../../../../../../../components/section-roll-numbers",
+      "../../../../../../../components/class-daily-dashboard",
+      "../../../../../../../components/workspace-loading",
+      "../../../../../../../components/workspace-tabs",
+      "../../../../../../../lib/academic-year-context",
+      "../../../../../../../components/class-teacher-editor",
+      "next/dynamic"
+    ],
+    "permissions": [
+      "STAFF_VIEW"
+    ],
+    "apiCalls": [
+      "classWorkspaceApi.dashboard",
+      "teacherApi.classTeacherOptions",
+      "classroomManagementApi.homework",
+      "classroomManagementApi.lessons",
+      "examApi.list",
+      "classroomManagementApi.calendar",
+      "classroomManagementApi.announcements",
+      "classroomManagementApi.createHomework",
+      "classroomManagementApi.remindHomework",
+      "classroomManagementApi.updateHomework",
+      "classroomManagementApi.createLesson",
+      "classroomManagementApi.createAnnouncement"
+    ],
+    "inlineStyles": 0,
+    "tables": 1,
+    "forms": 1
+  },
+  {
+    "route": "/access/roles",
+    "source": "apps/web/app/(admin)/access/roles/page.tsx",
+    "gate": "ROLE_VIEW",
+    "imports": [
+      "react"
+    ],
+    "permissions": [],
+    "apiCalls": [
+      "roleApi.list",
+      "permissionApi.list",
+      "roleApi.create",
+      "roleApi.update",
+      "roleApi.permissions",
+      "roleApi.savePermissions",
+      "roleApi.remove"
+    ],
+    "inlineStyles": 0,
+    "tables": 1,
+    "forms": 1
+  },
+  {
+    "route": "/admissions",
+    "source": "apps/web/app/(admin)/admissions/page.tsx",
+    "gate": "ADMISSIONS_VIEW",
+    "imports": [
+      "next/navigation"
+    ],
+    "permissions": [],
+    "apiCalls": [],
+    "inlineStyles": 0,
+    "tables": 0,
+    "forms": 0
+  },
+  {
+    "route": "/admissions/[view]",
+    "source": "apps/web/app/(admin)/admissions/[view]/page.tsx",
+    "gate": "ADMISSIONS_VIEW",
+    "imports": [
+      "next/navigation",
+      "../../../../components/admissions-workspace"
+    ],
+    "permissions": [],
+    "apiCalls": [],
+    "inlineStyles": 0,
+    "tables": 0,
+    "forms": 0
+  },
+  {
+    "route": "/dashboard",
+    "source": "apps/web/app/(admin)/dashboard/page.tsx",
+    "gate": "Page/component and API checks",
+    "imports": [
+      "react",
+      "next/link",
+      "../../../lib/api",
+      "../../../lib/auth-context",
+      "../../../components/ui",
+      "../../../lib/types",
+      "../../../lib/auth-context",
+      "../../../components/school-command-center",
+      "../../../components/platform-dashboard"
+    ],
+    "permissions": [],
+    "apiCalls": [
+      "dashboardApi.me"
+    ],
+    "inlineStyles": 0,
+    "tables": 1,
+    "forms": 0
+  },
+  {
+    "route": "/my-day",
+    "source": "apps/web/app/(admin)/my-day/page.tsx",
+    "gate": "Page/component and API checks",
+    "imports": [
+      "../../../components/school-operations"
+    ],
+    "permissions": [],
+    "apiCalls": [],
+    "inlineStyles": 0,
+    "tables": 0,
+    "forms": 0
+  },
+  {
+    "route": "/operations/attendance",
+    "source": "apps/web/app/(admin)/operations/attendance/page.tsx",
+    "gate": "Page/component and API checks",
+    "imports": [
+      "../../../../components/school-operations"
+    ],
+    "permissions": [],
+    "apiCalls": [],
+    "inlineStyles": 0,
+    "tables": 0,
+    "forms": 0
+  },
+  {
+    "route": "/operations/attendance-settings",
+    "source": "apps/web/app/(admin)/operations/attendance-settings/page.tsx",
+    "gate": "Page/component and API checks",
+    "imports": [
+      "../../../../components/attendance-policy-editor"
+    ],
+    "permissions": [],
+    "apiCalls": [],
+    "inlineStyles": 0,
+    "tables": 0,
+    "forms": 0
+  },
+  {
+    "route": "/operations/duties",
+    "source": "apps/web/app/(admin)/operations/duties/page.tsx",
+    "gate": "Page/component and API checks",
+    "imports": [
+      "../../../../components/school-operations"
+    ],
+    "permissions": [],
+    "apiCalls": [],
+    "inlineStyles": 0,
+    "tables": 0,
+    "forms": 0
+  },
+  {
+    "route": "/operations/leave",
+    "source": "apps/web/app/(admin)/operations/leave/page.tsx",
+    "gate": "Page/component and API checks",
+    "imports": [
+      "../../../../components/school-operations"
+    ],
+    "permissions": [],
+    "apiCalls": [],
+    "inlineStyles": 0,
+    "tables": 0,
+    "forms": 0
+  },
+  {
+    "route": "/operations/leave-policies",
+    "source": "apps/web/app/(admin)/operations/leave-policies/page.tsx",
+    "gate": "Page/component and API checks",
+    "imports": [
+      "../../../../components/attendance-policy-editor"
+    ],
+    "permissions": [],
+    "apiCalls": [],
+    "inlineStyles": 0,
+    "tables": 0,
+    "forms": 0
+  },
+  {
+    "route": "/operations",
+    "source": "apps/web/app/(admin)/operations/page.tsx",
+    "gate": "Page/component and API checks",
+    "imports": [
+      "../../../components/school-operations"
+    ],
+    "permissions": [],
+    "apiCalls": [],
+    "inlineStyles": 0,
+    "tables": 0,
+    "forms": 0
+  },
+  {
+    "route": "/operations/reports",
+    "source": "apps/web/app/(admin)/operations/reports/page.tsx",
+    "gate": "Page/component and API checks",
+    "imports": [
+      "../../../../components/school-operations"
+    ],
+    "permissions": [],
+    "apiCalls": [],
+    "inlineStyles": 0,
+    "tables": 0,
+    "forms": 0
+  },
+  {
+    "route": "/operations/settings",
+    "source": "apps/web/app/(admin)/operations/settings/page.tsx",
+    "gate": "Page/component and API checks",
+    "imports": [
+      "../../../../components/school-operations"
+    ],
+    "permissions": [],
+    "apiCalls": [],
+    "inlineStyles": 0,
+    "tables": 0,
+    "forms": 0
+  },
+  {
+    "route": "/people/parents",
+    "source": "apps/web/app/(admin)/people/parents/page.tsx",
+    "gate": "PARENT_VIEW",
+    "imports": [
+      "react",
+      "../../../../lib/api",
+      "../../../../lib/auth-context",
+      "../../../../lib/toast-context",
+      "../../../../lib/types",
+      "../../../../components/ui"
+    ],
+    "permissions": [
+      "PARENT_UPDATE",
+      "PARENT_UPDATE",
+      "PARENT_UPDATE"
+    ],
+    "apiCalls": [
+      "parentApi.list",
+      "studentApi.list",
+      "parentApi.onboard",
+      "parentApi.update",
+      "parentApi.linkStudent",
+      "parentApi.get",
+      "parentApi.unlinkStudent",
+      "parentApi.verifyConsent"
+    ],
+    "inlineStyles": 0,
+    "tables": 1,
+    "forms": 2
+  },
+  {
+    "route": "/people/parents/[parentId]",
+    "source": "apps/web/app/(admin)/people/parents/[parentId]/page.tsx",
+    "gate": "PARENT_VIEW",
+    "imports": [
+      "next/link",
+      "next/navigation",
+      "react",
+      "../../../../../lib/api",
+      "../../../../../lib/auth-context",
+      "../../../../../components/ui"
+    ],
+    "permissions": [],
+    "apiCalls": [
+      "parentApi.get"
+    ],
+    "inlineStyles": 0,
+    "tables": 0,
+    "forms": 0
+  },
+  {
+    "route": "/people/staff",
+    "source": "apps/web/app/(admin)/people/staff/page.tsx",
+    "gate": "STAFF_VIEW",
+    "imports": [
+      "../../../../components/staff-category-picker"
+    ],
+    "permissions": [],
+    "apiCalls": [
+      "staffApi.list",
+      "roleApi.list",
+      "staffApi.categories",
+      "staffApi.create",
+      "staffApi.update",
+      "staffApi.deactivate"
+    ],
+    "inlineStyles": 0,
+    "tables": 1,
+    "forms": 1
+  },
+  {
+    "route": "/people/students",
+    "source": "apps/web/app/(admin)/people/students/page.tsx",
+    "gate": "STUDENT_VIEW",
+    "imports": [
+      "next/link",
+      "../../../../lib/academic-year-context",
+      "react",
+      "../../../../lib/api",
+      "../../../../lib/auth-context",
+      "../../../../lib/toast-context",
+      "../../../../components/ui",
+      "../../../../lib/types"
+    ],
+    "permissions": [],
+    "apiCalls": [
+      "studentApi.list",
+      "studentApi.update",
+      "studentApi.remove"
+    ],
+    "inlineStyles": 0,
+    "tables": 1,
+    "forms": 1
+  },
+  {
+    "route": "/people/students/[studentId]",
+    "source": "apps/web/app/(admin)/people/students/[studentId]/page.tsx",
+    "gate": "STUDENT_VIEW",
+    "imports": [
+      "next/link",
+      "../../../../../lib/academic-year-context",
+      "next/navigation",
+      "react",
+      "../../../../../lib/api",
+      "../../../../../lib/auth-context",
+      "../../../../../components/ui"
+    ],
+    "permissions": [
+      "STUDENT_VIEW"
+    ],
+    "apiCalls": [
+      "studentApi.get"
+    ],
+    "inlineStyles": 0,
+    "tables": 0,
+    "forms": 0
+  },
+  {
+    "route": "/people/teacher-attendance",
+    "source": "apps/web/app/(admin)/people/teacher-attendance/page.tsx",
+    "gate": "Page/component and API checks",
+    "imports": [
+      "next/link",
+      "../../../../components/substitution-action",
+      "../../../../lib/academic-groups",
+      "../../../../lib/substitution-explanation",
+      "../../../../lib/attendance-drafts",
+      "react",
+      "../../../../lib/api",
+      "../../../../lib/auth-context",
+      "../../../../components/ui"
+    ],
+    "permissions": [
+      "timetable.substitution.generate",
+      "TIMETABLE_UPDATE",
+      "STAFF_VIEW",
+      "staff.attendance.mark",
+      "ATTENDANCE_MARK",
+      "STAFF_UPDATE",
+      "STAFF_VIEW",
+      "TIMETABLE_UPDATE",
+      "ATTENDANCE_MARK"
+    ],
+    "apiCalls": [
+      "teacherCoverApi.list",
+      "teacherCoverApi.policy",
+      "staffApi.list",
+      "teacherCoverApi.mark",
+      "teacherCoverApi.refresh",
+      "operationsApi.bulk",
+      "teacherCoverApi.assign",
+      "teacherCoverApi.savePolicy"
+    ],
+    "inlineStyles": 5,
+    "tables": 2,
+    "forms": 0
+  },
+  {
+    "route": "/people/teachers",
+    "source": "apps/web/app/(admin)/people/teachers/page.tsx",
+    "gate": "STAFF_VIEW",
+    "imports": [
+      "../../../../lib/school-academic-groups-context",
+      "../../../../components/teacher-class-eligibility",
+      "../../../../lib/academic-groups",
+      "../../../../components/teacher-capabilities",
+      "../../../../components/teacher-subject-assignments",
+      "next/link",
+      "react",
+      "../../../../lib/api",
+      "../../../../lib/academic-year-context",
+      "../../../../lib/auth-context",
+      "../../../../lib/toast-context",
+      "../../../../components/ui",
+      "../../../../lib/types"
+    ],
+    "permissions": [
+      "TEACHING_TEAM_VIEW",
+      "STAFF_VIEW",
+      "TEACHING_TEAM_VIEW",
+      "SUBJECT_TEACHER_VIEW",
+      "TEACHING_TEAM_VIEW"
+    ],
+    "apiCalls": [
+      "teacherApi.list",
+      "subjectApi.list",
+      "staffApi.list",
+      "teacherApi.create",
+      "classWorkspaceApi.workload"
+    ],
+    "inlineStyles": 0,
+    "tables": 1,
+    "forms": 1
+  },
+  {
+    "route": "/people/teachers/[teacherId]",
+    "source": "apps/web/app/(admin)/people/teachers/[teacherId]/page.tsx",
+    "gate": "STAFF_VIEW",
+    "imports": [
+      "../../../../../components/teacher-class-eligibility",
+      "../../../../../components/teacher-capabilities",
+      "next/link",
+      "next/navigation",
+      "react",
+      "../../../../../components/teacher-subject-assignments",
+      "../../../../../lib/api",
+      "../../../../../lib/auth-context",
+      "../../../../../components/ui"
+    ],
+    "permissions": [
+      "SUBJECT_TEACHER_MANAGE",
+      "SUBJECT_TEACHER_MANAGE",
+      "SUBJECT_TEACHER_VIEW"
+    ],
+    "apiCalls": [
+      "teacherApi.get",
+      "teacherApi.assignments",
+      "teacherApi.removeSubjectAssignment"
+    ],
+    "inlineStyles": 0,
+    "tables": 2,
+    "forms": 0
+  },
+  {
+    "route": "/reports/analytics",
+    "source": "apps/web/app/(admin)/reports/analytics/page.tsx",
+    "gate": "REPORT_VIEW",
+    "imports": [
+      "react",
+      "../../../../components/analytics-workspace",
+      "../../../../components/workspace-loading"
+    ],
+    "permissions": [],
+    "apiCalls": [],
+    "inlineStyles": 0,
+    "tables": 0,
+    "forms": 0
+  },
+  {
+    "route": "/school/profile",
+    "source": "apps/web/app/(admin)/school/profile/page.tsx",
+    "gate": "SCHOOL_PROFILE_VIEW",
+    "imports": [
+      "react",
+      "../../../../lib/api",
+      "../../../../lib/auth-context",
+      "../../../../lib/toast-context",
+      "../../../../lib/types",
+      "../../../../components/ui"
+    ],
+    "permissions": [
+      "SCHOOL_PROFILE_UPDATE"
+    ],
+    "apiCalls": [
+      "schoolApi.current",
+      "schoolSettingsApi.get",
+      "schoolApi.updateCurrent"
+    ],
+    "inlineStyles": 0,
+    "tables": 0,
+    "forms": 1
+  },
+  {
+    "route": "/school/settings",
+    "source": "apps/web/app/(admin)/school/settings/page.tsx",
+    "gate": "SCHOOL_PROFILE_VIEW",
+    "imports": [
+      "react",
+      "../../../../lib/api",
+      "../../../../lib/auth-context",
+      "../../../../lib/toast-context",
+      "../../../../components/ui"
+    ],
+    "permissions": [
+      "SCHOOL_PROFILE_UPDATE"
+    ],
+    "apiCalls": [
+      "schoolSettingsApi.get",
+      "schoolSettingsApi.update",
+      "schoolSettingsApi.save"
+    ],
+    "inlineStyles": 0,
+    "tables": 0,
+    "forms": 1
+  },
+  {
+    "route": "/school/[schoolSlug]/dashboard",
+    "source": "apps/web/app/(admin)/school/[schoolSlug]/dashboard/page.tsx",
+    "gate": "Page/component and API checks",
+    "imports": [
+      "react",
+      "next/navigation",
+      "../../../dashboard/page",
+      "../../../../../lib/auth-context",
+      "../../../../../components/ui"
+    ],
+    "permissions": [],
+    "apiCalls": [],
+    "inlineStyles": 0,
+    "tables": 0,
+    "forms": 0
+  },
+  {
+    "route": "/students/allocation",
+    "source": "apps/web/app/(admin)/students/allocation/page.tsx",
+    "gate": "ENROLLMENT_ALLOCATE",
+    "imports": [
+      "../../../../components/enrollment-planner"
+    ],
+    "permissions": [],
+    "apiCalls": [],
+    "inlineStyles": 0,
+    "tables": 0,
+    "forms": 0
+  },
+  {
+    "route": "/students/import-migration",
+    "source": "apps/web/app/(admin)/students/import-migration/page.tsx",
+    "gate": "students.import.view",
+    "imports": [
+      "../../../../components/student-import-workspace"
+    ],
+    "permissions": [],
+    "apiCalls": [],
+    "inlineStyles": 0,
+    "tables": 0,
+    "forms": 0
+  },
+  {
+    "route": "/students/promotions",
+    "source": "apps/web/app/(admin)/students/promotions/page.tsx",
+    "gate": "ENROLLMENT_PROMOTE",
+    "imports": [
+      "../../../../components/enrollment-planner"
+    ],
+    "permissions": [],
+    "apiCalls": [],
+    "inlineStyles": 0,
+    "tables": 0,
+    "forms": 0
+  },
+  {
+    "route": "/students/transfers",
+    "source": "apps/web/app/(admin)/students/transfers/page.tsx",
+    "gate": "ENROLLMENT_MOVE",
+    "imports": [
+      "../../../../components/enrollment-planner"
+    ],
+    "permissions": [],
+    "apiCalls": [],
+    "inlineStyles": 0,
+    "tables": 0,
+    "forms": 0
+  },
+  {
+    "route": "/students/unassigned",
+    "source": "apps/web/app/(admin)/students/unassigned/page.tsx",
+    "gate": "STUDENT_VIEW",
+    "imports": [
+      "../../../../components/enrollment-planner"
+    ],
+    "permissions": [],
+    "apiCalls": [],
+    "inlineStyles": 0,
+    "tables": 0,
+    "forms": 0
+  },
+  {
+    "route": "/students/upload",
+    "source": "apps/web/app/(admin)/students/upload/page.tsx",
+    "gate": "ADMISSIONS_MANAGE",
+    "imports": [
+      "next/navigation"
+    ],
+    "permissions": [],
+    "apiCalls": [],
+    "inlineStyles": 0,
+    "tables": 0,
+    "forms": 0
+  },
+  {
+    "route": "/change-password",
+    "source": "apps/web/app/change-password/page.tsx",
+    "gate": "Page/component and API checks",
+    "imports": [
+      "react",
+      "next/navigation",
+      "../../lib/api",
+      "../../lib/auth-context"
+    ],
+    "permissions": [],
+    "apiCalls": [
+      "authApi.changePassword"
+    ],
+    "inlineStyles": 0,
+    "tables": 0,
+    "forms": 1
+  },
+  {
+    "route": "/forbidden",
+    "source": "apps/web/app/forbidden/page.tsx",
+    "gate": "Page/component and API checks",
+    "imports": [
+      "next/link"
+    ],
+    "permissions": [],
+    "apiCalls": [],
+    "inlineStyles": 0,
+    "tables": 0,
+    "forms": 0
+  },
+  {
+    "route": "/login",
+    "source": "apps/web/app/login/page.tsx",
+    "gate": "Page/component and API checks",
+    "imports": [
+      "next/navigation",
+      "react",
+      "../../lib/auth-context",
+      "../../lib/api"
+    ],
+    "permissions": [],
+    "apiCalls": [],
+    "inlineStyles": 0,
+    "tables": 0,
+    "forms": 1
+  },
+  {
+    "route": "/",
+    "source": "apps/web/app/page.tsx",
+    "gate": "Page/component and API checks",
+    "imports": [
+      "next/navigation"
+    ],
+    "permissions": [],
+    "apiCalls": [],
+    "inlineStyles": 0,
+    "tables": 0,
+    "forms": 0
+  },
+  {
+    "route": "/parent/learning",
+    "source": "apps/web/app/parent/learning/page.tsx",
+    "gate": "Page/component and API checks",
+    "imports": [
+      "../../../components/parent-assessment-reports",
+      "react",
+      "../../../lib/auth-context"
+    ],
+    "permissions": [],
+    "apiCalls": [],
+    "inlineStyles": 3,
+    "tables": 0,
+    "forms": 0
+  },
+  {
+    "route": "/school/[schoolSlug]/login",
+    "source": "apps/web/app/school/[schoolSlug]/login/page.tsx",
+    "gate": "Page/component and API checks",
+    "imports": [
+      "../../../login/page"
+    ],
+    "permissions": [],
+    "apiCalls": [],
+    "inlineStyles": 0,
+    "tables": 0,
+    "forms": 0
+  }
+]

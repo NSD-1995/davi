@@ -1,6 +1,6 @@
 const test=require('node:test'),assert=require('node:assert/strict'),fs=require('node:fs'),path=require('node:path'),ts=require('typescript');
 const source=fs.readFileSync(path.join(__dirname,'../lib/timetable-overview.ts'),'utf8');
-const compiled=ts.transpileModule(source,{compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2020}}).outputText;
+const compiled=require('./school-navigation-test-support').transpileModule(source,{compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2020}}).outputText;
 const exported={};new Function('exports',compiled)(exported);
 const {latestSectionPlans,timetableConflicts}=exported;
 const plan=(id,sectionId,time,teacherId='teacher')=>({id,sectionId,status:'DRAFT',version:1,generatedAt:time,entries:[{weekday:1,periodSlotId:'p',teacherId,teacher:{user:{firstName:'Shared',lastName:'Teacher'}}}],template:{slots:[{id:'p',startTime:'09:00',endTime:'09:30'}]}});

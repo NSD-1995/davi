@@ -1,6 +1,6 @@
 'use client';
 import type { ReactNode } from 'react';
-import { usePathname, useRouter } from 'next/navigation';
+import { usePathname, useRouter } from '../../lib/school-navigation';
 import { useEffect } from 'react';
 import { AppShell } from '../../components/app-shell';
 import { LoadingState } from '../../components/ui';

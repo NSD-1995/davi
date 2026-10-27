@@ -1,5 +1,5 @@
 ﻿'use client';
-import Link from 'next/link';
+import Link from '../lib/school-navigation';
 import { useId, useMemo, useState } from 'react';
 import { ArrowUpRight, ChevronDown, LayoutGrid, List, Search } from 'lucide-react';
 import { filterWorkspaceClasses, sectionWorkspaceHref, workspaceAttendance } from '../lib/workspace-list';

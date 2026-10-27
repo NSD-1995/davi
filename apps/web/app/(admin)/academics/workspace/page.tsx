@@ -1,5 +1,5 @@
 ﻿'use client';
-import Link from 'next/link';
+import Link from '../../../../lib/school-navigation';
 import { useEffect, useState } from 'react';
 import { WorkspaceLoading } from '../../../../components/workspace-loading';
 import { WorkspaceClassList } from '../../../../components/workspace-class-list';

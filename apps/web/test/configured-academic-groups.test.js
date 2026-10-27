@@ -1,6 +1,6 @@
 const test=require('node:test'),assert=require('node:assert/strict'),fs=require('node:fs'),path=require('node:path'),ts=require('typescript');
 const source=fs.readFileSync(path.join(__dirname,'../lib/academic-groups.ts'),'utf8');
-const compiled=ts.transpileModule(source,{compilerOptions:{module:ts.ModuleKind.CommonJS}}).outputText;
+const compiled=require('./school-navigation-test-support').transpileModule(source,{compilerOptions:{module:ts.ModuleKind.CommonJS}}).outputText;
 const moduleExports={};new Function('exports',compiled)(moduleExports);
 const {configuredAcademicGroups,subjectInConfiguredGroups}=moduleExports;
 

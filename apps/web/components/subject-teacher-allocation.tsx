@@ -1,7 +1,7 @@
 'use client';
 import {teachingExclusion} from '../lib/teaching-responsibilities';
 import {academicGroup,subjectInGroup,ACADEMIC_GROUPS} from '../lib/academic-groups';
-import Link from 'next/link';
+import Link from '../lib/school-navigation';
 import {useEffect,useState} from 'react';
 import {ApiError,classApi,classWorkspaceApi,staffApi,teacherApi} from '../lib/api';
 import {useAuth} from '../lib/auth-context';

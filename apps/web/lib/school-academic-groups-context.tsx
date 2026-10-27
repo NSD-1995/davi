@@ -1,6 +1,6 @@
 'use client';
 import {createContext,useCallback,useContext,useEffect,useMemo,useState,type ReactNode} from 'react';
-import {usePathname} from 'next/navigation';
+import {usePathname} from './school-navigation';
 import {classApi} from './api';
 import {useAuth} from './auth-context';
 import {useAcademicYear} from './academic-year-context';

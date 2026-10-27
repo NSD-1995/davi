@@ -4,7 +4,7 @@ export interface CommandAction {key:string;title:string;count:number;href:string
 export interface CommandActivity {id:string;title:string;type:string;date:string;href:string}
 export interface CommandAttendanceRow {classId:string;className:string;sectionId:string;sectionName:string;total:number;statuses:Record<string,number>;recorded:number;notMarked:number|null;dayState:string;completion:number|null}
 export interface SchoolCommandData {
- asOf:string;school:{id:string;name:string;shortName?:string|null;logoUrl?:string|null}|null;academicYear:{id:string;name:string}|null;clock:{date:string;time:string;timeZone:string};scope:string;
+ asOf:string;school:{id:string;name:string;shortName?:string|null;logoId?:string|null;logoUrl?:string|null}|null;academicYear:{id:string;name:string}|null;clock:{date:string;time:string;timeZone:string};scope:string;
  sources:Record<string,CommandSource>;errors:Record<string,string>;setup:{steps:SetupStep[];completed:number;total:number;complete:boolean;outstanding:number};counts:Record<string,number|null>;
  attendance:{total:number;unassigned:number;expected:number;recorded:number;notMarked:number;percentage:number|null;statuses:Record<string,number>;sections:CommandAttendanceRow[];unknownCalendar:number}|null;
  dayStates:Record<string,string>;staff:{total:number;calendarStatus:string;statuses:Record<string,number>;teachers:number;teacherStatuses:Record<string,number>}|null;leaves:{approvedToday:number;pending:number}|null;cover:{covered:number;uncovered:number;scheduled:number;holiday:boolean;pending:number|null}|null;timetable:{flagged:number;note:string}|null;pendingTasks:number|null;actions:CommandAction[];activities:CommandActivity[];notes:string[];

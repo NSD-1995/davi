@@ -1,5 +1,7 @@
+import { slugValue } from '../school-experience/experience-rules';
 import {
   BadRequestException,
+  ConflictException,
   ForbiddenException,
   Injectable,
   NotFoundException,
@@ -30,6 +32,7 @@ export class SchoolsService {
     if (!schoolId) throw new ForbiddenException('A school account is required.');
     const allowed = {
       ...(data.name !== undefined ? { name: data.name.trim() } : {}),
+      ...(data.shortName !== undefined ? { shortName: data.shortName.trim() || null } : {}),
       ...(data.address !== undefined ? { address: data.address.trim() || null } : {}),
       ...(data.city !== undefined ? { city: data.city.trim() || null } : {}),
       ...(data.state !== undefined ? { state: data.state.trim() || null } : {}),
@@ -104,7 +107,7 @@ export class SchoolsService {
         address: data.address,
         city: data.city,
         state: data.state,
-        country: data.country,
+        country: data.country || 'India',
         phone: data.phone,
         email: data.email,
         website: data.website,
@@ -175,9 +178,11 @@ export class SchoolsService {
   }
 
   private async createSchoolSlug(shortName: string) {
-    const slug = this.slugify(shortName);
+    const slug = slugValue(this.slugify(shortName));
     if (!slug) throw new BadRequestException('School short name must contain letters or numbers');
 
+    const alias = await this.prisma.schoolSlugAlias.findUnique({where:{slug}});
+    if(alias)throw new ConflictException('School URL is already in use.');
     const existingSchool = await this.prisma.school.findUnique({ where: { slug } });
     if (existingSchool) throw new BadRequestException(`School short name "${shortName}" is already in use`);
 

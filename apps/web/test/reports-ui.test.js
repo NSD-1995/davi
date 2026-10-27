@@ -7,7 +7,7 @@ const React = require('react');
 const { renderToStaticMarkup: render } = require('react-dom/server');
 function load(file, mocks = {}) {
  const source = fs.readFileSync(path.join(__dirname, '../', file), 'utf8');
- const js = ts.transpileModule(source, {compilerOptions:{module:ts.ModuleKind.CommonJS,jsx:ts.JsxEmit.ReactJSX}}).outputText;
+ const js = require('./school-navigation-test-support').transpileModule(source, {compilerOptions:{module:ts.ModuleKind.CommonJS,jsx:ts.JsxEmit.ReactJSX}}).outputText;
  const exports = {};
  new Function('exports','require',js)(exports, name => name in mocks ? mocks[name] : require(name));
  return exports;
@@ -71,7 +71,7 @@ test('applied filters identify scope and default month without exposing IDs',()=
  assert.match(result,/Class 1/);assert.match(result,/2026–2027/);assert.match(result,/Current month/);assert.doesNotMatch(result,/secret-/);
 });
 const session={token:'test-token',user:{id:'u',school:{id:'s'}},roles:[],permissions:navigation.analyticsViews.map(v=>v.permission).filter(p=>p!=='__UNAVAILABLE__')};
-function fixture(){return {id:'snapshot-1',asOf:'2026-10-25T00:00:00Z',expiresAt:'2026-10-26T00:00:00Z',filters:{academicYearId:'year'},studentTotal:1,page:1,pages:1,summary:{students:1,classes:1,sections:1,attendancePercent:90,missingDays:1,homeworkCompleted:2,homeworkPending:1,homeworkOverdue:1,homeworkExcused:0,homeworkPercent:66.67,reviewBacklog:0,attentionStudents:1,examExpectedAttempts:1,examRecordedAttempts:1,examCompletionPercent:100,numericAttempts:1,teachers:1,lessonPlans:1,lessonPlanCoverage:50},capabilities:{attendance:true,homework:true,exams:true,staff:true,staffAttendance:true,lessons:true,admissions:true,attention:true,attentionManage:true,export:true,ai:true},period:{from:'2026-10-01',to:'2026-10-25',timeZone:'Asia/Kolkata'},students:[{enrollmentId:'e',name:'Test Student',signals:[],details:{}}],comparisons:[],academicGroups:[],attendanceTrend:[],staffAttendance:[],teachers:[],lessons:[],admissions:{applications:[],payments:[]},warnings:[],registry:[],unavailable:{},studentDetailTotals:{},tableTotals:{}};}
+function fixture(){return {id:'snapshot-1',asOf:'2026-10-25T00:00:00Z',expiresAt:new Date(Date.now()+3600000).toISOString(),filters:{academicYearId:'year'},studentTotal:1,page:1,pages:1,summary:{students:1,classes:1,sections:1,attendancePercent:90,missingDays:1,homeworkCompleted:2,homeworkPending:1,homeworkOverdue:1,homeworkExcused:0,homeworkPercent:66.67,reviewBacklog:0,attentionStudents:1,examExpectedAttempts:1,examRecordedAttempts:1,examCompletionPercent:100,numericAttempts:1,teachers:1,lessonPlans:1,lessonPlanCoverage:50},capabilities:{attendance:true,homework:true,exams:true,staff:true,staffAttendance:true,lessons:true,admissions:true,attention:true,attentionManage:true,export:true,ai:true},period:{from:'2026-10-01',to:'2026-10-25',timeZone:'Asia/Kolkata'},students:[{enrollmentId:'e',name:'Test Student',signals:[],details:{}}],comparisons:[],academicGroups:[],attendanceTrend:[],staffAttendance:[],teachers:[],lessons:[],admissions:{applications:[],payments:[]},warnings:[],registry:[],unavailable:{},studentDetailTotals:{},tableTotals:{}};}
 function renderWorkspace(leaf,permissions=session.permissions,utility){
  const selected={...session,permissions};const q=navigation.reportHref(leaf);q.set('academicYearId','year');if(utility)q.set('utility',utility);
  const report=fixture();report.requestKey=JSON.stringify(['s','u','test-token',permissions.slice().sort(),[]])+JSON.stringify({academicYearId:'year'});

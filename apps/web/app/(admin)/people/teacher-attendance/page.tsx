@@ -1,5 +1,5 @@
 'use client';
-import Link from 'next/link';
+import Link from '../../../../lib/school-navigation';
 import {SubstitutionAction} from '../../../../components/substitution-action';
 import {ACADEMIC_GROUPS,academicGroup} from '../../../../lib/academic-groups';
 import {substitutionExplanation} from '../../../../lib/substitution-explanation';

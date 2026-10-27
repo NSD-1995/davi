@@ -7,7 +7,7 @@ const React=require('react');
 const {renderToStaticMarkup}=require('react-dom/server');
 function load(file,mocks={}) {
  const source=fs.readFileSync(path.join(__dirname,'../',file),'utf8');
- const js=ts.transpileModule(source,{compilerOptions:{module:ts.ModuleKind.CommonJS,jsx:ts.JsxEmit.ReactJSX}}).outputText;
+ const js=require('./school-navigation-test-support').transpileModule(source,{compilerOptions:{module:ts.ModuleKind.CommonJS,jsx:ts.JsxEmit.ReactJSX}}).outputText;
  const exports={};new Function('exports','require',js)(exports,name=>name in mocks?mocks[name]:require(name));return exports;
 }
 const logic=load('lib/workspace-list.ts');

@@ -37,6 +37,9 @@ enum ParentStatus {
 }
 
 model School {
+ mediaAssets MediaAsset[]
+ academicTeam AcademicTeamAssignment[]
+ slugAliases SchoolSlugAlias[]
  analyticsSnapshots AnalyticsSnapshot[]
  analyticsExports AnalyticsExportJob[]
  analyticsAttentionCases AnalyticsAttentionCase[]
@@ -56,7 +59,7 @@ model School {
   address   String?
   city      String?
   state     String?
-  country   String?  @default("Kenya")
+  country   String?  @default("India")
   phone     String?
   email     String?
   website   String?
@@ -147,6 +150,7 @@ model RolePermission {
 }
 
 model User {
+ ownedMedia MediaAsset[] @relation("MediaOwner")
  analyticsSnapshots AnalyticsSnapshot[]
  analyticsExports AnalyticsExportJob[]
  analyticsOwnedCases AnalyticsAttentionCase[]
@@ -208,6 +212,7 @@ model UserRole {
 }
 
 model SchoolSetting {
+ branding Json?
  analyticsPolicy Json?
  assessmentAiPolicy Json?
   studentImportPolicy Json?
@@ -217,7 +222,7 @@ model SchoolSetting {
   schoolId          String   @unique
   school            School   @relation(fields: [schoolId], references: [id], onDelete: Cascade)
   schoolName        String?
-  timezone          String?  @default("Africa/Nairobi")
+  timezone          String?  @default("Asia/Kolkata")
   language          String?  @default("en")
   gradingSystem     String?  @default("percentage")
   timetableRules    Json?
@@ -415,6 +420,7 @@ model Subject {
 }
 
 model Staff {
+ managementAssignments AcademicTeamAssignment[]
   assignedEnquiries AdmissionEnquiry[]
   id          String            @id @default(uuid())
   schoolId    String
@@ -1828,4 +1834,56 @@ model StudentImportRow {
   @@unique([jobId,fileId,sourceRef])
   @@index([schoolId,academicYearId,jobId,status])
   @@index([jobId,targetEnrollmentId])
+}
+
+model MediaAsset {
+ school School @relation(fields:[schoolId],references:[id],onDelete:Restrict,onUpdate:NoAction)
+ owner User? @relation("MediaOwner",fields:[ownerUserId],references:[id],onDelete:Restrict,onUpdate:NoAction)
+ id String @id @default(uuid())
+ schoolId String
+ ownerUserId String?
+ uploadedBy String
+ provider String @default("local")
+ storageKey String @unique
+ category String
+ mimeType String
+ size Int
+ width Int
+ height Int
+ originalName String
+ sha256 String
+ visibility String @default("PRIVATE")
+ status String @default("ACTIVE")
+ createdAt DateTime @default(now())
+ @@index([schoolId,ownerUserId,category,status])
+}
+
+model AcademicTeamAssignment {
+ school School @relation(fields:[schoolId],references:[id],onDelete:Restrict,onUpdate:NoAction)
+ staff Staff @relation(fields:[staffId],references:[id],onDelete:Restrict,onUpdate:NoAction)
+ id String @id @default(uuid())
+ schoolId String
+ staffId String
+ designation String
+ groupIds String[] @default([])
+ classIds String[] @default([])
+ sectionIds String[] @default([])
+ subjectIds String[] @default([])
+ startDate DateTime? @db.Date
+ endDate DateTime? @db.Date
+ status String @default("ACTIVE")
+ revision Int @default(1)
+ createdBy String
+ updatedBy String
+ createdAt DateTime @default(now())
+ updatedAt DateTime @updatedAt
+ @@index([schoolId,status])
+}
+
+model SchoolSlugAlias {
+ school School @relation(fields:[schoolId],references:[id],onDelete:Restrict,onUpdate:NoAction)
+ slug String @id
+ schoolId String
+ createdAt DateTime @default(now())
+ @@index([schoolId])
 }

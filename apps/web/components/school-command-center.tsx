@@ -1,9 +1,9 @@
 ﻿'use client';
-import Link from 'next/link';
+import Link from '../lib/school-navigation';
 import { useEffect, useRef, useState } from 'react';
 import { RefreshCw, ChartNoAxesCombined, PanelRightClose, PanelRightOpen, CalendarDays } from 'lucide-react';
 import { schoolNow } from '../lib/class-daily';
-import { dashboardApi } from '../lib/api';
+import { dashboardApi, schoolExperienceApi } from '../lib/api';
 import { useAuth } from '../lib/auth-context';
 import { useAcademicYear } from '../lib/academic-year-context';
 import { commandDayLabel, dashboardNumber, schoolDateLabel, type SchoolCommandData } from '../lib/school-command-center';
@@ -25,12 +25,13 @@ export function SchoolCommandCenter() {
  if(yearLoading||response.key!==key||!response.data&&!response.error)return <LoadingState label="Loading school command center…"/>;
  if(response.error&&!response.data)return <ErrorState message={response.error} retry={()=>setRevision(value=>value+1)}/>;
  const data=response.data!;
+ const schoolLogo=data.school?.logoId?schoolExperienceApi.publicMedia(data.school.logoId):data.school?.logoUrl;
  const mode=modeChoice||(data.setup.outstanding===0?'today':'overview'),outstanding=data.setup.steps.find(step=>step.done===false&&step.href);
  const quickLinks=[{label:'Class Workspace',href:'/academics/workspace',permission:'CLASS_VIEW'},{label:'School profile',href:'/school/profile',permission:'SCHOOL_PROFILE_VIEW'},{label:'Period templates',href:'/academics/period-templates',permission:'PERIOD_TEMPLATE_VIEW'},{label:'School calendar',href:'/academics/holidays-events',permission:'EVENT_VIEW'}].filter(link=>can(link.permission));
  const activityPanel=<CommandActivities data={data} quickLinks={quickLinks}/>;
  const availability=Object.entries(data.sources).filter(([,status])=>status!=='ready');
  return <div className="school-command-center">
-  <header className="cc-header tw-flex tw-items-center tw-justify-between tw-gap-3"><div className="cc-school-identity"><div className="cc-school-mark"><span>{(data.school?.shortName||data.school?.name||'D').slice(0,2).toUpperCase()}</span>{data.school?.logoUrl&&<img key={data.school.logoUrl} src={data.school.logoUrl} alt={`${data.school.name} logo`} onError={e=>{e.currentTarget.hidden=true;}}/>}</div><div><h1>{data.school?.name||'School Command Center'}</h1><p>{data.academicYear?.name||'Academic year not configured'} <span>·</span> <time dateTime={data.clock.date}>{schoolDateLabel(data.clock.date)}</time><small>{data.clock.timeZone}</small></p></div></div><div className="cc-header-actions"><button className="button secondary" disabled={busy} onClick={()=>setRevision(value=>value+1)}><RefreshCw size={14}/><span>Refresh</span></button>{can('REPORT_VIEW')&&<Link className="button" href={'/reports/analytics?'+new URLSearchParams({view:'overview',...(data.academicYear?{academicYearId:data.academicYear.id}:{})})}><ChartNoAxesCombined size={14}/>Reports</Link>}<button className="cc-mobile-activities button secondary" onClick={()=>setDrawer(true)}><CalendarDays size={14}/>Activities</button></div></header>
+  <header className="cc-header tw-flex tw-items-center tw-justify-between tw-gap-3"><div className="cc-school-identity"><div className="cc-school-mark"><span>{data.school?.shortName?.trim()||(data.school?.name||'D').slice(0,2).toUpperCase()}</span>{schoolLogo&&<img key={schoolLogo} src={schoolLogo} alt={`${data.school?.name} logo`} onError={e=>{e.currentTarget.hidden=true;}}/>}</div><div><h1>{data.school?.name||'School Command Center'}</h1><p>{data.academicYear?.name||'Academic year not configured'} <span>·</span> <time dateTime={data.clock.date}>{schoolDateLabel(data.clock.date)}</time><small>{data.clock.timeZone}</small></p></div></div><div className="cc-header-actions"><button className="button secondary" disabled={busy} onClick={()=>setRevision(value=>value+1)}><RefreshCw size={14}/><span>Refresh</span></button>{can('REPORT_VIEW')&&<Link className="button" href={'/reports/analytics?'+new URLSearchParams({view:'overview',...(data.academicYear?{academicYearId:data.academicYear.id}:{})})}><ChartNoAxesCombined size={14}/>Reports</Link>}<button className="cc-mobile-activities button secondary" onClick={()=>setDrawer(true)}><CalendarDays size={14}/>Activities</button></div></header>
   {response.error&&<div className="cc-partial-alert" role="alert"><strong>Refresh failed. Showing the last successful update.</strong><span>{response.error}</span></div>}
   <div className="cc-mode-toolbar"><nav aria-label="Dashboard mode"><button aria-current={mode==='today'?'page':undefined} onClick={()=>setMode('today')}>Today</button><button aria-current={mode==='overview'?'page':undefined} onClick={()=>setMode('overview')}>Overview</button></nav><span className="cc-day-label">{commandDayLabel(data.dayStates)}</span><button className="cc-rail-toggle" aria-expanded={rail} aria-controls="cc-activity-rail" onClick={()=>setRail(!rail)}>{rail?<PanelRightClose size={15}/>:<PanelRightOpen size={15}/>}Activities</button></div>
   <div className="cc-context"><span>{data.scope}</span><span>Updated {new Date(data.asOf).toLocaleTimeString('en-IN',{timeZone:data.clock.timeZone,hour:'2-digit',minute:'2-digit'})} school time</span></div>

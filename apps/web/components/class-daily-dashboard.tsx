@@ -1,5 +1,5 @@
 'use client';
-import Link from 'next/link';
+import Link from '../lib/school-navigation';
 import {useEffect,useState} from 'react';
 import {attendanceApi,operationsApi,eventApi} from '../lib/api';
 import {useAuth} from '../lib/auth-context';

@@ -1,6 +1,6 @@
 'use client';
 import { useEffect, useState } from 'react';
-import { useRouter } from 'next/navigation';
+import { useRouter } from '../lib/school-navigation';
 import { useAcademicYear } from '../lib/academic-year-context';
 import { useAuth } from '../lib/auth-context';
 import { classWorkspaceApi } from '../lib/api';

@@ -1,0 +1,15 @@
+﻿import { BadRequestException } from '@nestjs/common';
+import { z } from 'zod';
+export const brandingSchema=z.object({version:z.literal(1).default(1),primary:z.string().regex(/^#[0-9a-fA-F]{6}$/).default('#123f52'),accent:z.string().regex(/^#[0-9a-fA-F]{6}$/).default('#08756c'),secondary:z.string().regex(/^#[0-9a-fA-F]{6}$/).default('#173552'),legacyLogoEnabled:z.boolean().default(true),logoId:z.string().uuid().nullable().default(null),backgroundId:z.string().uuid().nullable().default(null),iconId:z.string().uuid().nullable().default(null),workspaceBackground:z.boolean().default(false),overlay:z.enum(['MINIMAL','STANDARD','STRONG']).default('STANDARD'),position:z.enum(['center','top','bottom']).default('center')}).strict();
+export function brand(value:unknown){const result=brandingSchema.safeParse(value||{});if(!result.success)throw new BadRequestException('Invalid branding configuration. Use six-digit HEX colors and approved image references.');return result.data;}
+export const reserved=new Set(['admin','api','login','logout','school','schools','profile','settings','dashboard','s','public','media','assets','support','www','root','system','davi']);
+export function slugValue(value:unknown){if(typeof value!=='string')throw new BadRequestException('Enter a school URL name.');const slug=value.trim().toLowerCase();if(!/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(slug)||slug.length<2||slug.length>60||reserved.has(slug))throw new BadRequestException('Use 2–60 lowercase letters, numbers or internal hyphens, excluding system names.');return slug;}
+export function imageHeader(buffer:Buffer){
+ if(buffer.length<24)throw new BadRequestException('Invalid image.');
+ let width=0,height=0,type='';
+ if(buffer.subarray(0,8).equals(Buffer.from([137,80,78,71,13,10,26,10]))){type='image/png';width=buffer.readUInt32BE(16);height=buffer.readUInt32BE(20);}
+ else if(buffer[0]===255&&buffer[1]===216){type='image/jpeg';let i=2;while(i+4<buffer.length){if(buffer[i]!==255){i++;continue;}const marker=buffer[i+1];if(marker===0xd9||marker===0xda)break;if(marker===0xd8||marker===0x01||(marker>=0xd0&&marker<=0xd7)){i+=2;continue;}const size=buffer.readUInt16BE(i+2);if(size<2||i+2+size>buffer.length)break;if([0xc0,0xc1,0xc2].includes(marker)&&size>=7){height=buffer.readUInt16BE(i+5);width=buffer.readUInt16BE(i+7);break;}i+=2+size;}}
+ else if(buffer.toString('ascii',0,4)==='RIFF'&&buffer.toString('ascii',8,12)==='WEBP'){
+ type='image/webp';const kind=buffer.toString('ascii',12,16);if(kind==='VP8X'&&buffer.length>=30){width=1+buffer.readUIntLE(24,3);height=1+buffer.readUIntLE(27,3);}else if(kind==='VP8 '&&buffer.length>=30&&buffer[23]===0x9d&&buffer[24]===0x01&&buffer[25]===0x2a){width=buffer.readUInt16LE(26)&0x3fff;height=buffer.readUInt16LE(28)&0x3fff;}else if(kind==='VP8L'&&buffer.length>=25&&buffer[20]===0x2f){const bits=buffer.readUInt32LE(21);width=(bits&0x3fff)+1;height=((bits>>>14)&0x3fff)+1;}}
+ if(!width||!height||width>6000||height>6000||width*height>16000000)throw new BadRequestException('Choose a PNG, JPEG or WebP image up to 6000px per side and 16 megapixels.');return {width,height,type};
+}

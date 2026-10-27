@@ -1,7 +1,7 @@
 'use client';
 import {AttendanceExceptions} from './attendance-exceptions';
 import {LeaveLedger} from './leave-ledger';
-import Link from 'next/link';
+import Link from '../lib/school-navigation';
 import {mergeAttendanceDrafts} from '../lib/attendance-drafts';
 import { useEffect, useRef, useState } from 'react';
 import { operationsApi, punchAttendance, teacherCoverApi, classWorkspaceApi } from '../lib/api';

@@ -1,0 +1,79 @@
+.auth-page.school-login {
+  min-height: 100vh;
+  min-height: 100dvh;
+  display: grid;
+  grid-template-columns: 1fr;
+  background-color: #163c49;
+  background-image: var(--login-background-image);
+  background-size: cover;
+  background-position: var(--login-background-position, center);
+}
+
+.auth-page.school-login .auth-panel {
+  min-height: 100vh;
+  min-height: 100dvh;
+  padding: 40px 20px;
+  background: transparent;
+}
+
+.auth-page.school-login .auth-card {
+  width: 100%;
+  max-width: 440px;
+  padding: 36px;
+  border: 1px solid rgba(255, 255, 255, .7);
+  border-radius: 22px;
+  background: #fff;
+  box-shadow: 0 24px 80px #061b3445;
+}
+
+.school-login .school-login-heading {
+  gap: 14px;
+  margin-bottom: 28px;
+  padding-bottom: 24px;
+  border-bottom: 1px solid #e7edef;
+}
+
+.school-login .brand-mark,
+.school-login .school-login-logo {
+  width: 52px;
+  height: 52px;
+  flex-shrink: 0;
+  border-radius: 14px;
+}
+
+.school-login-label {
+  display: block;
+  margin-bottom: 5px;
+  color: #526674;
+  font-size: .64rem;
+  font-weight: 750;
+  letter-spacing: .16em;
+}
+
+.school-login .brand-mark {
+  width: auto;
+  min-width: 52px;
+  max-width: 120px;
+  padding: 8px;
+  height: auto;
+  min-height: 52px;
+  overflow-wrap: anywhere;
+  text-align: center;
+  font-size: .95rem;
+}
+
+.school-login .school-login-heading h2 { font-size: 1.2rem; }
+.school-login-welcome h1 { font-size: 1.65rem; line-height: 1.2; margin-bottom: 10px; }
+.school-login-welcome p { font-size: .86rem; line-height: 1.6; margin-bottom: 26px; }
+.school-login .field { margin-bottom: 20px; }
+.school-login .field input { min-height: 48px; background: #f8fafb; border-radius: 10px; }
+.school-login .button.full { min-height: 48px; border-radius: 10px; font-size: .9rem; }
+.auth-page.school-login .auth-card > .school-login-footer { margin-top: 24px; text-align: center; font-size: .7rem; line-height: 1.6; }
+.school-login-footer span { padding: 0 5px; }
+
+@media (max-width: 480px) {
+  .auth-page.school-login .auth-panel { padding: 24px 16px; }
+  .auth-page.school-login .auth-card { padding: 28px 24px; border-radius: 18px; }
+  .school-login-welcome h1 { font-size: 1.45rem; }
+}
+

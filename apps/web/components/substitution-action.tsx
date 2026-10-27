@@ -1,5 +1,5 @@
 ﻿'use client';
-import Link from 'next/link';
+import Link from '../lib/school-navigation';
 import {useState} from 'react';
 import {useAuth} from '../lib/auth-context';
 function unavailableReason(cover:any){

@@ -1,5 +1,5 @@
 ﻿'use client';
-import Link from 'next/link';
+import Link from '../../../../lib/school-navigation';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { MoreHorizontal, Search, PanelLeft, Plus } from 'lucide-react';
 import { useSchoolAcademicGroups } from '../../../../lib/school-academic-groups-context';

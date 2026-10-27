@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect } from 'react';
-import { useParams, useRouter } from 'next/navigation';
+import { useParams, useRouter } from '../../../../../lib/school-navigation';
 import DashboardPage from '../../../dashboard/page';
 import { dashboardPathFor, useAuth } from '../../../../../lib/auth-context';
 import { LoadingState } from '../../../../../components/ui';

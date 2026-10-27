@@ -1,0 +1,42 @@
+﻿/* Phase 1 foundation. Existing screens adopt these tokens in later phases. */
+:root {
+  --davi-color-primary: var(--navy);
+  --davi-color-accent: var(--teal);
+  --davi-color-action: var(--teal-dark);
+  --davi-color-canvas: var(--canvas);
+  --davi-color-surface: var(--white);
+  --davi-color-text: var(--ink);
+  --davi-color-text-muted: var(--muted);
+  --davi-color-border: var(--line);
+  --davi-color-danger: var(--red);
+  --davi-color-success: #267454;
+  --davi-color-warning: #89520f;
+  --davi-color-focus: #08756c;
+  --davi-space-1: 4px;
+  --davi-space-2: 8px;
+  --davi-space-3: 12px;
+  --davi-space-4: 16px;
+  --davi-space-5: 20px;
+  --davi-space-6: 24px;
+  --davi-radius-control: 8px;
+  --davi-radius-card: 12px;
+  --davi-font-body: 0.875rem;
+  --davi-font-body-large: 1rem;
+  --davi-line-height-body: 1.5;
+  --davi-sidebar-expanded: 232px;
+  --davi-sidebar-collapsed: 68px;
+  --davi-header-height: 60px;
+  --davi-page-inset: var(--davi-space-6);
+  --davi-content-gap: var(--davi-space-4);
+  --davi-control-min-height: 44px;
+  --davi-table-row-min-height: 44px;
+  --davi-focus-width: 3px;
+  --davi-focus-offset: 3px;
+  --davi-motion-duration: 160ms;
+}
+@media (max-width: 767px) {
+  :root { --davi-page-inset: var(--davi-space-4); }
+}
+@media (prefers-reduced-motion: reduce) {
+  :root { --davi-motion-duration: 0ms; }
+}

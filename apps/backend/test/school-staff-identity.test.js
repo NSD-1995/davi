@@ -20,7 +20,7 @@ test('duplicate active logins require a school selector', async () => {
 test('school login filters active accounts and validates their password', async () => {
   let where;
   const passwordHash = await bcrypt.hash('test-password', 4);
-  const service = new AuthService({ user: { findMany: async query => { where = query.where; return [{ id: 'new-user', email: 'same@test.com', passwordHash, status: 'ACTIVE' }]; } } }, { sign: payload => payload.sub });
+  const service = new AuthService({ schoolSlugAlias:{findUnique:async()=>null}, user: { findMany: async query => { where = query.where; return [{ id: 'new-user', email: 'same@test.com', passwordHash, status: 'ACTIVE' }]; } } }, { sign: payload => payload.sub });
   const result = await service.login({ username: '9876543210', password: 'test-password', schoolSlug: 'new-school' });
   assert.equal(where.status, 'ACTIVE');
   assert.deepEqual(where.school, { slug: 'new-school' });

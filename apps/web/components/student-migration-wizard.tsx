@@ -1,5 +1,5 @@
 'use client';
-import Link from 'next/link';
+import Link from '../lib/school-navigation';
 import { useEffect, useRef, useState } from 'react';
 import { ACADEMIC_GROUPS } from '../lib/academic-groups';
 import { classApi, studentMigrationApi as api } from '../lib/api';

@@ -4,7 +4,7 @@ const fs = require('node:fs');
 const path = require('node:path');
 const ts = require('typescript');
 const source = fs.readFileSync(path.join(__dirname, '../lib/academic-navigation.ts'), 'utf8');
-const compiled = ts.transpileModule(source, { compilerOptions: { module: ts.ModuleKind.CommonJS } }).outputText;
+const compiled = require('./school-navigation-test-support').transpileModule(source, { compilerOptions: { module: ts.ModuleKind.CommonJS } }).outputText;
 const api = {}; new Function('exports', compiled)(api);
 const { academicNavigation, visibleAcademicNavigation, matchesAcademicRoute } = api;
 
@@ -35,7 +35,7 @@ function renderNavigation(route, permissions) {
   const React = require('react');
   const { renderToStaticMarkup } = require('react-dom/server');
   const componentSource = fs.readFileSync(path.join(__dirname, '../components/academic-navigation.tsx'), 'utf8');
-  const javascript = ts.transpileModule(componentSource, { compilerOptions: { module: ts.ModuleKind.CommonJS, jsx: ts.JsxEmit.ReactJSX } }).outputText;
+  const javascript = require('./school-navigation-test-support').transpileModule(componentSource, { compilerOptions: { module: ts.ModuleKind.CommonJS, jsx: ts.JsxEmit.ReactJSX } }).outputText;
   const component = {};
   const imports = name => {
     if (name === '../lib/auth-context') return { useAuth: () => ({ can: permission => permissions.includes(permission), session: null }) };

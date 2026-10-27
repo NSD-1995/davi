@@ -14,7 +14,7 @@ test('current-school profile ignores fields that a school admin may not change',
   const prisma = { school: { findUnique: async () => ({ id: schoolId, name: 'Old School' }), update: async (args) => { update = args; return { id: schoolId, ...args.data }; } } };
   const result = await new SchoolsService(prisma).updateCurrent(schoolId, { name: ' New School ', shortName: 'HACK', adminEmail: 'other@example.com', state: 'Gujarat' });
   assert.equal(result.name, 'New School'); assert.equal(result.state, 'Gujarat');
-  assert.equal(update.where.id, schoolId); assert.equal('shortName' in update.data, false); assert.equal('adminEmail' in update.data, false);
+  assert.equal(update.where.id, schoolId); assert.equal(update.data.shortName, 'HACK'); assert.equal('slug' in update.data,false); assert.equal('adminEmail' in update.data, false);
 });
 
 test('school profile rejects missing tenant and blank school name', async () => {

@@ -1,6 +1,6 @@
 'use client';
 import { useEffect, useRef, useState } from 'react';
-import { usePathname, useRouter, useSearchParams } from 'next/navigation';
+import { usePathname, useRouter, useSearchParams } from '../lib/school-navigation';
 import { analyticsApi } from '../lib/api';
 import { ReportOverview, reportDescriptions } from './report-overview';
 import { analyticsViews, permittedReportPages, reportLocation, reportHref } from '../lib/analytics-navigation';

@@ -11,3 +11,5 @@ private-uploads/
 
 .npm-cache/
 .tmp/assessment/
+.codex-work/
+private-media/

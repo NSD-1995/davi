@@ -1,5 +1,5 @@
 'use client';
-import Link from 'next/link';
+import Link from '../lib/school-navigation';
 import { AssessmentChangeHistory } from './assessment-change-history';
 import { AssessmentMarksSheet } from './assessment-marks-sheet';
 import { useEffect, useRef, useState } from 'react';

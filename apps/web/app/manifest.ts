@@ -1,0 +1,2 @@
+﻿import type {MetadataRoute} from 'next';
+export default function manifest():MetadataRoute.Manifest{return {id:'/',name:'DAVI School Workspace',short_name:'DAVI',description:'School administration and academic operations',start_url:'/login',scope:'/',display:'standalone',background_color:'#f5f7f9',theme_color:'#123f52',icons:[{src:'/icons/davi-192.png',sizes:'192x192',type:'image/png',purpose:'any'},{src:'/icons/davi-512.png',sizes:'512x512',type:'image/png',purpose:'any'},{src:'/icons/davi-512.png',sizes:'512x512',type:'image/png',purpose:'maskable'}]};}

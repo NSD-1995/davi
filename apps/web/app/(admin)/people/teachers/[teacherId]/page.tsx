@@ -1,8 +1,9 @@
 'use client';
+import {StaffPhotoEditor} from '../../../../../components/media-upload';
 import {TeacherClassEligibility} from '../../../../../components/teacher-class-eligibility';
 import {TeacherCapabilities} from '../../../../../components/teacher-capabilities';
-import Link from 'next/link';
-import { useParams } from 'next/navigation';
+import Link from '../../../../../lib/school-navigation';
+import { useParams } from '../../../../../lib/school-navigation';
 import { useEffect, useState } from 'react';
 import { TeacherSubjectAssignments } from '../../../../../components/teacher-subject-assignments';
 import { ApiError, teacherApi } from '../../../../../lib/api';
@@ -44,7 +45,7 @@ export default function TeacherDashboardPage() {
     const key = [assignment.academicYearId,assignment.classId,assignment.sectionId||'all'].join(':');
     groups.set(key,[...(groups.get(key)||[]),assignment]);
   }
-  return <>
+  return <><StaffPhotoEditor category="TEACHER_PROFILE_PHOTO" userId={teacher.userId||teacher.user.id} name={teacher.user.firstName+' '+teacher.user.lastName}/>
     <PageHeader title={teacher.user.firstName+' '+teacher.user.lastName} description="Teacher profile, existing subjects and class responsibilities" action={<Link className="button secondary" href="/people/teachers">Back to teachers</Link>}/>
     <section className="metric-grid">
       {[[ 'Teacher code',teacher.teacherCode ],['Active assignments',active.length],['Classes',new Set(active.map(a=>a.classId)).size],['Sections',new Set(active.filter(a=>a.sectionId).map(a=>a.sectionId)).size],['Capable subjects',(teacher.capableSubjectIds||[]).length],['Assigned subjects',new Set(subjectAssignments.map(a=>a.subjectId)).size]].map(([name,value])=><article className="metric-card" key={String(name)}><strong>{value}</strong><p>{name}</p></article>)}

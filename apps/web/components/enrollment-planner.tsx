@@ -1,7 +1,7 @@
 'use client';
 import { sectionName, SectionNaming } from '../lib/section-naming';
 import { CapacityPolicyEditor } from './section-capacity-policy';
-import Link from 'next/link';
+import Link from '../lib/school-navigation';
 import { useEffect, useState } from 'react';
 import { enrollmentPlanningApi } from '../lib/api';
 import { useAuth } from '../lib/auth-context';

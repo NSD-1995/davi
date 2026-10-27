@@ -129,6 +129,8 @@ export class AuthService {
   }
 
   async login(dto: LoginDto) {
+    if(dto.schoolSlug){const key=dto.schoolSlug.trim().toLowerCase();const alias=await this.prisma.schoolSlugAlias.findUnique({where:{slug:key}});if(alias){const school=await this.prisma.school.findUnique({where:{id:alias.schoolId},select:{slug:true}});if(school)dto={...dto,schoolSlug:school.slug};}}
+
     const identifier = dto.username?.trim() || dto.email?.trim().toLowerCase();
     if (!identifier) throw new BadRequestException('Email or username is required.');
     const users = await this.prisma.user.findMany({

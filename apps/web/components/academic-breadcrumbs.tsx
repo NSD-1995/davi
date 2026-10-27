@@ -1,6 +1,6 @@
 'use client';
-import Link from 'next/link';
-import { usePathname } from 'next/navigation';
+import Link from '../lib/school-navigation';
+import { usePathname } from '../lib/school-navigation';
 import { academicNavigation, matchesAcademicRoute } from '../lib/academic-navigation';
 export function AcademicBreadcrumbs() {
   const path = usePathname();

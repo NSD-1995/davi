@@ -1,6 +1,6 @@
 const test=require('node:test'),assert=require('node:assert/strict'),fs=require('node:fs'),ts=require('typescript');
 const source=fs.readFileSync(require('node:path').join(__dirname,'../lib/student-intake-csv.ts'),'utf8');
-const api={};new Function('exports','require',ts.transpileModule(source,{compilerOptions:{module:ts.ModuleKind.CommonJS}}).outputText)(api,()=>{const dates={};new Function('exports',ts.transpileModule(fs.readFileSync(require('node:path').join(__dirname,'../lib/import-date.ts'),'utf8'),{compilerOptions:{module:ts.ModuleKind.CommonJS}}).outputText)(dates);return dates;});
+const api={};new Function('exports','require',require('./school-navigation-test-support').transpileModule(source,{compilerOptions:{module:ts.ModuleKind.CommonJS}}).outputText)(api,()=>{const dates={};new Function('exports',require('./school-navigation-test-support').transpileModule(fs.readFileSync(require('node:path').join(__dirname,'../lib/import-date.ts'),'utf8'),{compilerOptions:{module:ts.ModuleKind.CommonJS}}).outputText)(dates);return dates;});
 const {parseStudentIntakeCsv:parse}=api;
 test('intake CSV supports quoted names, BOM, CRLF, blanks and configured extra fields',()=>{
  const rows=parse('\uFEFFfirstName,lastName,className,parentName,mobile,extra.language\r\n"Child, One",,Class 3,"Parent ""One""",9876543210,Tamil\r\n\r\n');

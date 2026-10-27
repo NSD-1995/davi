@@ -11,7 +11,7 @@ function renderTable(rows, permissions = [], expand = false) {
   function load(filename) {
     if (cache.has(filename)) return cache.get(filename);
     const source = fs.readFileSync(filename, 'utf8');
-    const javascript = ts.transpileModule(source, { compilerOptions: { module: ts.ModuleKind.CommonJS, jsx: ts.JsxEmit.ReactJSX } }).outputText;
+    const javascript = require('./school-navigation-test-support').transpileModule(source, { compilerOptions: { module: ts.ModuleKind.CommonJS, jsx: ts.JsxEmit.ReactJSX } }).outputText;
     const exports = {}; cache.set(filename, exports);
     const imports = name => {
       if (name.endsWith('/auth-context')) return { useAuth: () => ({ can: permission => permissions.includes(permission) }) };

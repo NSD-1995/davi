@@ -277,3 +277,18 @@ export const analyticsApi={
  insights:(t:string,snapshotId:string)=>request<any>('/reports/analytics/insights',{method:'POST',body:json({snapshotId})},t),
  approveInsight:(t:string,id:string)=>request<any>('/reports/analytics/insights/'+id+'/approve',{method:'POST'},t),
 };
+
+export const schoolExperienceApi={
+ branding:(t:string)=>request<any>('/school-experience/branding',{cache:'no-store'},t),
+ saveBranding:(t:string,b:unknown)=>request<any>('/school-experience/branding',{method:'PATCH',body:json(b)},t),
+ publicSchool:(slug:string)=>request<any>('/school-experience/public/'+encodeURIComponent(slug),{cache:'no-store'}),
+ publicMedia:(id:string)=>API_URL+'/school-experience/public-media/'+encodeURIComponent(id),
+ mediaUrl:(id:string)=>API_URL+'/school-experience/media/'+encodeURIComponent(id),
+ upload:async(t:string,category:string,file:File,ownerUserId?:string)=>{const form=new FormData();form.append('file',file);form.append('category',category);if(ownerUserId)form.append('ownerUserId',ownerUserId);const response=await fetch(API_URL+'/school-experience/media',{method:'POST',headers:{Authorization:'Bearer '+t},body:form});const result=await response.json();if(!response.ok)throw new ApiError(messageOf(result),response.status);return result;},
+ remove:(t:string,id:string)=>request<any>('/school-experience/media/'+id,{method:'DELETE'},t),
+ photo:(t:string,userId:string)=>request<any>('/school-experience/photo/'+userId,{cache:'no-store'},t),
+ team:(t:string)=>request<any>('/school-experience/team',{cache:'no-store'},t),
+ saveTeam:(t:string,d:unknown,id?:string)=>request<any>('/school-experience/team'+(id?'/'+id:''),{method:id?'PATCH':'POST',body:json(d)},t),
+ availability:(t:string,value:string)=>request<any>('/school-experience/slug?'+new URLSearchParams({value}),{cache:'no-store'},t),
+ rename:(t:string,slug:string,previousSlug:string)=>request<any>('/school-experience/slug',{method:'PATCH',body:json({slug,previousSlug})},t),
+};

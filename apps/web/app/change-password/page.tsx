@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, type FormEvent } from 'react';
-import { useRouter } from 'next/navigation';
+import { useRouter } from '../../lib/school-navigation';
 import { authApi, ApiError } from '../../lib/api';
 import { dashboardPathFor, useAuth } from '../../lib/auth-context';
 

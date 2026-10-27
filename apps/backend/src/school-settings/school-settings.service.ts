@@ -57,7 +57,7 @@ export class SchoolSettingsService {
       where: { schoolId },
       update: {
         schoolName: data.schoolName ?? school.name,
-        timezone: data.timezone ?? 'Africa/Nairobi',
+        timezone: data.timezone ?? 'Asia/Kolkata',
         language: data.language ?? 'en',
         gradingSystem: data.gradingSystem ?? 'percentage',
         attendancePolicy: data.attendancePolicy ?? null,
@@ -68,7 +68,7 @@ export class SchoolSettingsService {
       create: {
         schoolId,
         schoolName: data.schoolName ?? school.name,
-        timezone: data.timezone ?? 'Africa/Nairobi',
+        timezone: data.timezone ?? 'Asia/Kolkata',
         language: data.language ?? 'en',
         gradingSystem: data.gradingSystem ?? 'percentage',
         attendancePolicy: data.attendancePolicy ?? null,
@@ -80,6 +80,8 @@ export class SchoolSettingsService {
   }
 
   async update(id: string, schoolId: string | null, data: UpdateSchoolSettingDto) {
+    const keys=['schoolName','timezone','language','gradingSystem','attendancePolicy','examPolicy','notificationEmail','logoUrl'];
+    data=Object.fromEntries(Object.entries(data).filter(([key,value])=>keys.includes(key)&&(typeof value==='string'||value===null)));
     await this.findOne(id, schoolId);
 
     return this.prisma.schoolSetting.update({

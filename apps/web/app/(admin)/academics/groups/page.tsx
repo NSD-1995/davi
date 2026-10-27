@@ -1,6 +1,6 @@
 'use client';
 import {useSchoolAcademicGroups} from '../../../../lib/school-academic-groups-context';
-import Link from 'next/link';
+import Link from '../../../../lib/school-navigation';
 import {useEffect,useState} from 'react';
 import {ACADEMIC_GROUPS} from '../../../../lib/academic-groups';
 import {responsibilityRows,GroupResponsibility} from '../../../../lib/teaching-responsibilities';

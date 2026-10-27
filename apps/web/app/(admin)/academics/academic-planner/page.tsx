@@ -1,6 +1,6 @@
 'use client';
 
-import Link from 'next/link';
+import Link from '../../../../lib/school-navigation';
 import { useEffect, useState } from 'react';
 import { useAuth } from '../../../../lib/auth-context';
 import { useAcademicYear } from '../../../../lib/academic-year-context';

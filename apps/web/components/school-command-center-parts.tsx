@@ -1,5 +1,5 @@
 ﻿'use client';
-import Link from 'next/link';
+import Link from '../lib/school-navigation';
 import { useEffect, useId, useRef, useState, type ReactNode } from 'react';
 import { ArrowUpRight, Check, Circle, X } from 'lucide-react';
 import { dashboardNumber, schoolDateLabel, type SchoolCommandData, type SetupStep } from '../lib/school-command-center';

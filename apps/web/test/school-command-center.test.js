@@ -9,7 +9,7 @@ function loader({data=fixture(),mode=null,allowed=permissions,error='',drawer=fa
  const key=JSON.stringify([currentSession.token,currentSession.user.schoolId,currentSession.permissions,allowed.includes('ACADEMIC_YEAR_VIEW')?year:'']);
  const react={...React,useState(initial){const index=state++;return React.useState(index===0?{key,data,error}:index===3?mode:index===5?drawer:initial);}};
  function load(file){let absolute=path.isAbsolute(file)?file:path.join(__dirname,'../',file);if(!fs.existsSync(absolute))absolute+=fs.existsSync(absolute+'.tsx')?'.tsx':'.ts';if(cache.has(absolute))return cache.get(absolute);
- const source=fs.readFileSync(absolute,'utf8'),js=ts.transpileModule(source,{compilerOptions:{module:ts.ModuleKind.CommonJS,jsx:ts.JsxEmit.ReactJSX,target:ts.ScriptTarget.ES2020}}).outputText,exports={};cache.set(absolute,exports);
+ const source=fs.readFileSync(absolute,'utf8'),js=require('./school-navigation-test-support').transpileModule(source,{compilerOptions:{module:ts.ModuleKind.CommonJS,jsx:ts.JsxEmit.ReactJSX,target:ts.ScriptTarget.ES2020}}).outputText,exports={};cache.set(absolute,exports);
  const imports=name=>{if(name==='react')return react;if(name==='next/link')return {default:({children,...props})=>React.createElement('a',props,children)};if(name.endsWith('/auth-context'))return {useAuth:()=>({session:currentSession,can:p=>allowed.includes(p)})};if(name.endsWith('/academic-year-context'))return {useAcademicYear:()=>({selectedId:year,loading:false})};if(name.endsWith('/api'))return {dashboardApi:{}};if(name.startsWith('.'))return load(path.resolve(path.dirname(absolute),name));return require(name);};new Function('exports','require',js)(exports,imports);return exports;}
  return {load,render(){return render(React.createElement(load('components/school-command-center.tsx').SchoolCommandCenter));}};
 }
@@ -27,7 +27,7 @@ test('activities rail does not repeat Action Center records',()=>{const result=l
 test('role-restricted overview steps never imply configuration is missing',()=>{const data=fixture();data.setup.steps[5]={label:'Roles',done:null,href:null};const result=loader({data,mode:'overview'}).render();assert.match(result,/Not available with current access/);});
 
 test('teacher, student and platform dashboards retain their existing dispatch paths',()=>{
- const source=fs.readFileSync(path.join(__dirname,'../app/(admin)/dashboard/page.tsx'),'utf8'),js=ts.transpileModule(source,{compilerOptions:{module:ts.ModuleKind.CommonJS,jsx:ts.JsxEmit.ReactJSX,target:ts.ScriptTarget.ES2020}}).outputText;
+ const source=fs.readFileSync(path.join(__dirname,'../app/(admin)/dashboard/page.tsx'),'utf8'),js=require('./school-navigation-test-support').transpileModule(source,{compilerOptions:{module:ts.ModuleKind.CommonJS,jsx:ts.JsxEmit.ReactJSX,target:ts.ScriptTarget.ES2020}}).outputText;
  function roleView(kind,platform=false){const selected={...session,user:{...session.user,firstName:'Test'}},key=JSON.stringify([selected.token,selected.permissions]);const view=kind==='teacher'?{kind,assignments:[],sections:[]}:kind==='student'?{kind,enrollment:null,attendance:{percentage:0,present:0,marked:0,byStatus:{},recent:[]}}:{kind:'admin'};
  const react={...React,useState(initial){return React.useState(initial&&typeof initial==='object'&&'view'in initial?{key,view,error:''}:initial);}};
  const ui={PageHeader:({title})=>React.createElement('h1',null,title),LoadingState:()=>null,ErrorState:()=>null,EmptyState:({title})=>React.createElement('p',null,title),StatusBadge:()=>null};const exports={};

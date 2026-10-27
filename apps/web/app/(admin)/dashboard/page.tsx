@@ -1,6 +1,6 @@
 'use client';
 import { useEffect, useState } from 'react';
-import Link from 'next/link';
+import Link from '../../../lib/school-navigation';
 import { dashboardApi } from '../../../lib/api';
 import { useAuth } from '../../../lib/auth-context';
 import { EmptyState, ErrorState, LoadingState, PageHeader, StatusBadge } from '../../../components/ui';

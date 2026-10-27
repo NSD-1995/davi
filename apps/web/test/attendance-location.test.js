@@ -1,5 +1,5 @@
 const test=require('node:test'),assert=require('node:assert/strict'),fs=require('node:fs'),ts=require('typescript');
-const output=ts.transpileModule(fs.readFileSync(require('node:path').join(__dirname,'../lib/attendance-location.ts'),'utf8'),{compilerOptions:{module:ts.ModuleKind.CommonJS}}).outputText;
+const output=require('./school-navigation-test-support').transpileModule(fs.readFileSync(require('node:path').join(__dirname,'../lib/attendance-location.ts'),'utf8'),{compilerOptions:{module:ts.ModuleKind.CommonJS}}).outputText;
 const exported={};new Function('exports',output)(exported);
 test('GPS is requested once with no cached location or continuous watch',async()=>{
  let count=0;const result=await exported.attendanceLocation({getCurrentPosition(success,failure,options){count++;assert.equal(options.maximumAge,0);assert.equal(options.enableHighAccuracy,true);success({coords:{latitude:0,longitude:0,accuracy:12}});}});
