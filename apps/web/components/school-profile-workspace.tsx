@@ -37,7 +37,7 @@ export function SchoolProfileWorkspace({legacySettings=false}:{legacySettings?:b
  const loginPath=school?.slug?`/school/${encodeURIComponent(school.slug)}/login`:'';
  const brandMark=managedLogo||(legacyLogoAllowed&&safeLogo(logo))?<img src={managedLogo||safeLogo(logo)} alt="School logo"/>:<span>{initials}</span>;
  return <div className="school-profile-workspace">
-  <header className="sp-heading"><div><span className="eyebrow">SCHOOL ADMINISTRATION</span><h1>School Profile</h1><p>One place for your school identity, appearance and academic team.</p></div><span className="sp-access">{writable?'Administrator access':'Read-only access'}</span></header>
+  <header className="sp-heading"><div><span className="eyebrow">SCHOOL ADMINISTRATION</span><h1>School Profile &amp; Branding</h1><p>One place for your school identity, appearance and academic team.</p></div><span className="sp-access">{writable?'Administrator access':'Read-only access'}</span></header>
   <section className="sp-identity"><div className="sp-logo">{brandMark}</div><div><h2>{school?.name}</h2><p>{school?.shortName||'Short name not configured'}<span aria-hidden="true"> · </span>{[school?.city,school?.state].filter(Boolean).join(', ')||'Location not configured'}</p></div><span className="sp-school-tag">School workspace</span></section>
   <nav className="sp-tabs" aria-label="School profile sections">{tabs.map(t=><button key={t.key} type="button" aria-current={active===t.key?'page':undefined} onClick={()=>selectTab(t.key)}><t.icon size={17} aria-hidden="true"/>{t.label}</button>)}</nav>
   <section className="sp-panel" aria-label={tabs.find(t=>t.key===active)?.label}>

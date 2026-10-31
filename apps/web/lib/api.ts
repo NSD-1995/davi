@@ -56,11 +56,33 @@ export const enrollmentPlanningApi = {
   history: (t: string, id: string) => request<any[]>(`/enrollment-planning/${id}/history`, {}, t),
 };
 export const authApi = {
-  login: (identifier: string, password: string, schoolSlug?: string) => request<{ token: string; requiresPasswordChange: boolean; user: User }>('/auth/login', { method: 'POST', body: json({ username: identifier, password, schoolSlug }) }),
+  login: (identifier: string, password: string, schoolSlug?: string, platform=false) => request<{ token: string; requiresPasswordChange: boolean; user: User }>('/auth/login', { method: 'POST', body: json({ username: identifier, password, schoolSlug, platform }) }),
   me: (token: string) => request<{ user: User; roles: Array<{ id: string; name: string; code: string }>; permissions: string[] }>('/auth/me', {}, token),
   changePassword: (token: string, currentPassword: string, newPassword: string) => request<{ message: string; user: User }>('/auth/change-password', { method: 'POST', body: json({ currentPassword, newPassword }) }, token),
+  completePlatformReset: (resetToken: string, newPassword: string) => request<{ message: string }>('/auth/platform/reset-password', { method: 'POST', body: json({ token: resetToken, newPassword }) }),
 };
-export const dashboardApi = { command:(t:string,yearId?:string)=>request<any>('/dashboard/command-center'+(yearId?'?'+new URLSearchParams({academicYearId:yearId}):''),{cache:'no-store'},t), me: (t:string)=>request<MyDashboard>('/dashboard/me',{},t), summary: (t: string) => request<DashboardSummary>('/dashboard/summary', {}, t) };
+/** DAVI-owned SaaS data. Each endpoint requires a platform Super Admin token. */
+export const platformApi = {
+  overview: (t: string) => request<any>('/platform/overview', {}, t),
+  aiUsage: (t: string) => request<any[]>('/platform/ai-usage', {}, t),
+  settings: (t: string) => request<any[]>('/platform/settings', {}, t),
+  saveSettings: (t: string, items: any[]) => request<any[]>('/platform/settings', { method: 'POST', body: json({ items }) }, t),
+  plans: (t: string) => request<any[]>('/platform/plans', {}, t),
+  users: (t: string) => request<any[]>('/platform/users', {}, t),
+  createUser: (t: string, body: { firstName: string; lastName: string; email: string }) => request<any>('/platform/users', { method: 'POST', body: json(body) }, t),
+  setUserStatus: (t: string, id: string, status: 'ACTIVE' | 'INACTIVE' | 'SUSPENDED') => request<any>(`/platform/users/${id}/status`, { method: 'POST', body: json({ status }) }, t),
+  createPasswordReset: (t: string, id: string) => request<{ token: string; expiresAt: string }>(`/platform/users/${id}/password-reset`, { method: 'POST' }, t),
+  school: (t: string, id: string) => request<any>(`/platform/schools/${id}`, {}, t),
+  support: (t: string) => request<any[]>('/platform/support', {}, t),
+  updateSupport: (t: string, id: string, body: { status?: string; priority?: string; reply?: string; internal?: boolean }) => request<any>(`/platform/support/${id}`, { method: 'POST', body: json(body) }, t),
+  seedPlans: (t: string) => request<any[]>('/platform/plans/seed', { method: 'POST' }, t),
+  subscriptions: (t: string) => request<any[]>('/platform/subscriptions', {}, t),
+  createSubscription: (t: string, body: { schoolId: string; planId: string; billingFrequency: 'MONTHLY' | 'QUARTERLY' | 'YEARLY'; startDate: string; status?: 'TRIAL' | 'ACTIVE' }) => request<any>('/platform/subscriptions', { method: 'POST', body: json(body) }, t),
+  invoices: (t: string) => request<any[]>('/platform/invoices', {}, t),
+  recordPayment: (t: string, body: { invoiceId: string; amount: number; reference: string; method?: string; paidAt?: string; notes?: string }) => request<any>('/platform/payments', { method: 'POST', body: json(body) }, t),
+  verifyPayment: (t: string, paymentId: string) => request<any>(`/platform/payments/${paymentId}/verify`, { method: 'POST' }, t),
+};
+export const dashboardApi = { command:(t:string,yearId?:string,date?:string)=>request<any>('/dashboard/command-center?'+new URLSearchParams({...yearId?{academicYearId:yearId}:{},...date?{date}:{}}),{cache:'no-store'},t), me: (t:string)=>request<MyDashboard>('/dashboard/me',{},t), summary: (t: string) => request<DashboardSummary>('/dashboard/summary', {}, t) };
 export const schoolSettingsApi = {
   get: (t: string, schoolId: string) => request<Record<string, unknown>>(`/school-settings/schools/${schoolId}`, {}, t),
   save: (t: string, data: Record<string, unknown>) => request<Record<string, unknown>>('/school-settings', { method: 'POST', body: json(data) }, t),
@@ -82,8 +104,15 @@ export const schoolApi = {
   current: (t: string) => request<School>('/schools/me/profile', {}, t),
   updateCurrent: (t: string, data: Partial<School>) => request<School>('/schools/me/profile', { method: 'PATCH', body: json(data) }, t),
   list: (t: string) => request<School[]>('/schools', {}, t),
+  shortNameAvailability: (t: string, value: string) => request<{ available: boolean; slug: string; suggestion: string | null; message: string }>(`/schools/short-name-availability?value=${encodeURIComponent(value)}`, {}, t),
   create: (t: string, data: Record<string, unknown>) => request<CreateSchoolResult>('/schools', { method: 'POST', body: json(data) }, t),
   update: (t: string, id: string, data: Partial<School>) => request<School>(`/schools/${id}`, { method: 'PATCH', body: json(data) }, t),
+  onboarding: (t: string) => request<{ status: string; completedAt: string | null; welcomeShownAt: string | null; onboardingCurrentStep: number; isWizardCompleted: boolean; isWizardSkipped: boolean; shouldShowWelcome: boolean }>('/schools/me/onboarding', {}, t),
+  completeOnboarding: (t: string) => request('/schools/me/onboarding/complete', { method: 'POST' }, t),
+  skipOnboarding: (t: string) => request('/schools/me/onboarding/skip', { method: 'POST' }, t),
+  acknowledgeWelcome: (t: string) => request('/schools/me/onboarding/welcome-shown', { method: 'POST' }, t),
+  saveOnboardingProgress: (t: string, step: number) => request('/schools/me/onboarding/progress', { method: 'POST', body: json({ step }) }, t),
+  resumeOnboarding: (t: string) => request('/schools/me/onboarding/resume', { method: 'POST' }, t),
 };
 export const academicYearApi = {
   list: (t: string) => request<AcademicYear[]>('/academic-years', {}, t),
@@ -292,3 +321,22 @@ export const schoolExperienceApi={
  availability:(t:string,value:string)=>request<any>('/school-experience/slug?'+new URLSearchParams({value}),{cache:'no-store'},t),
  rename:(t:string,slug:string,previousSlug:string)=>request<any>('/school-experience/slug',{method:'PATCH',body:json({slug,previousSlug})},t),
 };
+
+export const engagementApi={
+ context:(t:string)=>request<any>('/engagement/context',{cache:'no-store'},t),
+ queryAssignees:(t:string)=>request<any[]>('/engagement/query-assignees',{},t),
+ personalAlerts:(t:string)=>request<any[]>('/engagement/alerts',{cache:'no-store'},t),
+ readAlert:(t:string,id:string)=>request('/engagement/alerts/'+id+'/read',{method:'PATCH'},t),
+ queries:(t:string,enrollmentId?:string,page=0)=>request<any[]>('/engagement/queries?'+new URLSearchParams({...enrollmentId?{enrollmentId}:{},page:String(page)}),{cache:'no-store'},t),
+ query:(t:string,id:string,before?:string)=>request<any>('/engagement/queries/'+id+(before?'?'+new URLSearchParams({before}):''),{cache:'no-store'},t),
+ createQuery:(t:string,d:unknown)=>request<any>('/engagement/queries',{method:'POST',body:json(d)},t),
+ changeQuery:(t:string,id:string,d:unknown)=>request<any>('/engagement/queries/'+id,{method:'PATCH',body:json(d)},t),
+ readResponsePolicy:(t:string)=>request<any>('/engagement/query-response-policy',{},t),
+ responsePolicy:(t:string,hours:number,studentAttendanceDeadline?:string|null)=>request('/engagement/query-response-policy',{method:'PUT',body:json({hours,studentAttendanceDeadline})},t),
+ activities:(t:string,date:string,academicYearId?:string)=>request<any[]>('/engagement/activities?'+new URLSearchParams({date,...academicYearId?{academicYearId}:{}}),{cache:'no-store'},t),
+ activityOptions:(t:string,academicYearId:string)=>request<any[]>('/engagement/activity-options?'+new URLSearchParams({academicYearId}),{cache:'no-store'},t),
+ createActivity:(t:string,d:unknown)=>request<any>('/engagement/activities',{method:'POST',body:json(d)},t),
+ changeActivity:(t:string,id:string,d:unknown)=>request('/engagement/activities/'+id,{method:'PATCH',body:json(d)},t),
+};
+
+export const automationApi={status:(t:string)=>request<any>('/teacher-cover/automation',{cache:'no-store'},t),run:(t:string)=>request<any>('/teacher-cover/automation/run',{method:'POST'},t)};

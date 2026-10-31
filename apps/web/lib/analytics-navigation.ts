@@ -19,7 +19,7 @@ export const analyticsViews=[
 
 // Legacy leaf views remain valid URLs. Only these six destinations are primary navigation.
 export const reportPages = [
- {key:'overview',label:'Overview',description:'Decision-critical signals across your authorized school scope.',views:['overview']},
+ {key:'overview',label:'School Overview',description:'Decision-critical signals across your authorized school scope.',views:['overview']},
  {key:'classes',label:'Class & Section Analytics',description:'Compare sections, then explore their students and learning records.',views:['classes']},
  {key:'academic',label:'Academic Performance',description:'Comparable achievement, assessment completeness and subject results.',views:['academic','exams','subjects']},
  {key:'engagement',label:'Engagement Analytics',description:'Participation and completion, with missing records shown explicitly.',views:['attendance','homework']},

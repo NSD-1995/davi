@@ -1,11 +1,13 @@
 export class CreateSchoolDto {
   name!: string;
   shortName!: string;
+  programs!: string[];
   address?: string;
   city?: string;
   state?: string;
   country?: string;
   phone?: string;
+  landline?: string;
   email?: string;
   website?: string;
   adminEmail!: string;
@@ -21,6 +23,7 @@ export class UpdateSchoolDto {
   state?: string;
   country?: string;
   phone?: string;
+  landline?: string;
   email?: string;
   website?: string;
   adminEmail?: string;

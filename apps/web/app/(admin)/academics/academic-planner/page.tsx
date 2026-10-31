@@ -30,7 +30,7 @@ export default function AcademicPlanner(){
   const run=async(action:()=>Promise<any>)=>{setBusy(true);setError('');setNotice('');try{await action();}catch(e){setError((e as Error).message);}finally{setBusy(false);}};
   const reload=async(id=program?.id)=>{if(id)setProgram(await call(`/academic-programs/${id}`));};
   const act=async(path:string,method='POST',body?:unknown)=>{await call(`/academic-programs/${program.id}${path}`,method,body);await reload();};
-  return <><PageHeader title="Academic planner" description="Turn a reviewed syllabus into teaching, assessment and evidence-based follow-up."/>
+  return <><PageHeader title="Academic Planner" description="Turn a reviewed syllabus into teaching, assessment and evidence-based follow-up."/>
     {error&&<div role="alert" className="alert error">{error}</div>}{notice&&<div role="status" className="alert">{notice}</div>}
     <fieldset disabled={busy} style={{border:0,padding:0,minWidth:0}}>
     <section className="card form-grid three">

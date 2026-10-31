@@ -10,7 +10,7 @@ import { useToast } from '../lib/toast-context';
 import { ConfirmDialog, EmptyState, ErrorState, Field, LoadingState, Modal, PageHeader } from './ui';
 
 export type EnrollmentView = 'unassigned' | 'allocation' | 'transfers' | 'promotions';
-const titles = { unassigned: 'Unassigned students', allocation: 'Section Capacity & Allocation', transfers: 'Transfers & Swaps', promotions: 'Student promotions' };
+const titles = { unassigned: 'Unassigned students', allocation: 'Section Allocation', transfers: 'Transfers & Swaps', promotions: 'Promotions' };
 const studentName = (row:any) => `${row.student.user.firstName} ${row.student.user.lastName}`;
 
 export function EnrollmentPlanner({ view }: { view: EnrollmentView }) {

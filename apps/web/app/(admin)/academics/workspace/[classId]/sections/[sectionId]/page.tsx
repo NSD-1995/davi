@@ -19,7 +19,7 @@ const tabPermissions: Record<Tab, string[]> = {'Overview': [], 'Students': ['STU
 export default function Page(){
  const{session,can}=useAuth(),{show}=useToast(),p=useParams<{classId:string;sectionId:string}>(),searchParams=useSearchParams(),{selectedId,setSelectedId}=useAcademicYear(),yearId=searchParams.get('year')||selectedId;
  const[tab,setTab]=useState<Tab>('Overview'),[data,setData]=useState<SectionDashboard|null>(null),[x,setX]=useState<any>({}),[teachers,setTeachers]=useState<any[]>([]),[error,setError]=useState(''),[loading,setLoading]=useState(true);
- const [attendanceDate,setAttendanceDate]=useState<string>(); const request=useRef(0); const availableTabs=tabs.filter(t=>tabPermissions[t].every(can));
+ const [attendanceDate,setAttendanceDate]=useState<string|undefined>(searchParams.get('date')||undefined); const request=useRef(0); const availableTabs=tabs.filter(t=>tabPermissions[t].every(can));
  useEffect(()=>{const requested=searchParams.get('tab');if(requested&&tabs.includes(requested as Tab))setTab(tabPermissions[requested as Tab].every(can)?requested as Tab:'Overview');},[searchParams.get('tab'),session?.token,session?.permissions.join('|')]);
  const load=async()=>{
   const id=++request.current; if(!session||!yearId){setLoading(false);return;} setError('');setLoading(true);

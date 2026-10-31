@@ -5,6 +5,8 @@ import {CoverageService} from './coverage.service';
 @Controller('teacher-cover') @UseGuards(JwtAuthGuard)
 export class CoverageController {
  constructor(private readonly service:CoverageService,private readonly access:OperationsAccessService){}
+ @Get('automation') automation(@Req()r:any){return this.service.automationStatus(r.user.schoolId,r.user.id);}
+ @Post('automation/run') runAutomation(@Req()r:any){return this.service.runAutomation(r.user.schoolId,r.user.id);}
  @Get('alerts') alerts(@Req()r:any){return this.service.alerts(r.user.schoolId,r.user.id);}
  @Patch('alerts/:id/read') readAlert(@Req()r:any,@Param('id')id:string){return this.service.readAlert(r.user.schoolId,r.user.id,id);}
  @Get('schedule') async schedule(@Req()r:any,@Query('date')date:string){const actor=await this.access.actor(r.user.schoolId,r.user.id,'timetable.substitution.view');const result=await this.service.schedule(r.user.schoolId,date);return{...result,covers:result.covers.filter((c:any)=>c.target&&this.access.matchesTarget(actor,c.target))};}

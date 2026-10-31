@@ -9,3 +9,10 @@ test('mark read waits for backend success before reducing count and preserves hi
 test('read failure keeps item unread and exposes retry feedback',async()=>{const result=notifications({items:[item('1')],read:async()=>{throw Error('failed');}});find(result.tree,n=>n.type==='button'&&n.props.children==='Mark as read').props.onClick();await new Promise(resolve=>setImmediate(resolve));assert.equal(result.states[0].items[0].readAt,null);assert.match(result.states[0].error,/Could not mark/);});
 test('notification navigation ignores untrusted payload URLs and checks known destination permissions',()=>{assert.equal(presentation.notificationDestination({...item('1'),url:'https://evil.test'},()=>true),null);assert.equal(presentation.notificationDestination({...item('1'),dedupeKey:'COVERAGE:1'},()=>false),null);assert.equal(presentation.notificationDestination({...item('1'),dedupeKey:'COVERAGE:1'},()=>true),'/people/teacher-attendance');});
 test('sorting does not mutate API rows and empty state contains no fabricated notices',()=>{const rows=[{...item('older'),createdAt:'2026-10-01'},{...item('newer'),createdAt:'2026-10-26'}];assert.equal(presentation.notificationSummary(rows).items[0].id,'newer');assert.equal(rows[0].id,'older');assert.match(notifications().html,/all caught up/);});
+test('query notifications allow only participant workspaces and reject arbitrary query identifiers',()=>{
+ const id='11111111-1111-4111-8111-111111111111',notice={...item('q'),dedupeKey:'QUERY:'+id+':2'};
+ assert.equal(presentation.notificationDestination(notice,()=>false),null);
+ assert.equal(presentation.notificationDestination(notice,()=>false,true),'/parent/learning?queryId='+id+'#parent-queries');
+ assert.equal(presentation.notificationDestination(notice,()=>true),'/dashboard?queryId='+id+'#parent-queries');
+ assert.equal(presentation.notificationDestination({...notice,dedupeKey:'QUERY:https://evil.test'},()=>true,true),null);
+});

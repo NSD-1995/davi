@@ -13,11 +13,13 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
   const path = usePathname();
   const router = useRouter();
   const required = Object.entries(routePermissions).find(([prefix]) => path === prefix || path.startsWith(`${prefix}/`))?.[1];
-  const wrongPlatformRoute = Boolean(session && isSuperAdmin(session) && path !== '/dashboard');
+  const wrongPlatformRoute = Boolean(session && isSuperAdmin(session) && !path.startsWith('/davi/'));
   useEffect(() => {
-    if (!loading && session && wrongPlatformRoute) router.replace('/dashboard');
+    if (!loading && session && wrongPlatformRoute) router.replace('/davi/dashboard');
     else if (!loading && session && required && !can(required)) router.replace('/forbidden');
   }, [can, loading, required, router, session, wrongPlatformRoute]);
   if (loading || !session || session.user.mustChangePassword || wrongPlatformRoute || (required && !can(required))) return <div className="screen-center"><LoadingState label="Loading your workspace…" /></div>;
+  // Activation is intentionally a focused transition before the full workspace shell appears.
+  if (path === '/welcome' || path === '/onboarding') return <>{children}</>;
   return <AppShell>{children}</AppShell>;
 }

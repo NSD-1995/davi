@@ -1,5 +1,5 @@
 export type Status = 'ACTIVE' | 'INACTIVE' | 'SUSPENDED';
-export interface School { id: string; name: string; shortName?: string | null; slug: string; address?: string | null; city?: string | null; state?: string | null; country?: string | null; phone?: string | null; email?: string | null; website?: string | null; createdAt?: string; users?: User[] }
+export interface School { id: string; name: string; shortName?: string | null; slug: string; address?: string | null; city?: string | null; state?: string | null; country?: string | null; phone?: string | null; landline?: string | null; email?: string | null; website?: string | null; createdAt?: string; users?: User[] }
 export interface CreateSchoolResult { message: string; school: School; admin: { id: string; email: string; username: string; schoolId: string; mustChangePassword: boolean }; credentials: { username: string; temporaryPassword: string }; loginPath: string; loginUrl: string }
 export interface User { id: string; schoolId: string | null; email?: string; username?: string | null; firstName: string; lastName: string; mustChangePassword: boolean; school?: School | null }
 export interface RoleSummary { id: string; name: string; code: string }

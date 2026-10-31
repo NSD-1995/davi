@@ -26,3 +26,17 @@
  .sidebar-compact .sidebar .nav-group a:focus-visible{outline-offset:-2px}
 }
 .shell-school-logo:has(>span){width:auto;min-width:38px;max-width:90px;height:auto;min-height:38px;padding:6px;font-size:.75rem;overflow-wrap:anywhere;text-align:center}
+/* One permission-filtered tree for desktop, compact rail and mobile drawer. */
+.sidebar-search{display:flex;align-items:center;gap:8px;margin:8px 0;color:#c7d9e4;border:1px solid #ffffff30;border-radius:8px;padding:8px;flex-shrink:0}
+.sidebar-search input{min-width:0;width:100%;border:0;background:transparent;color:white;font:inherit;font-size:.78rem;outline:none}
+.sidebar-search:focus-within{outline:2px solid #8cdbcf;outline-offset:2px}.sidebar-search input::placeholder{color:#bbccd7}
+.sidebar-search-status{font-size:.75rem;color:#c7d9e4;padding:4px 8px}.sidebar-search-status button{background:transparent;color:inherit;border:0;text-decoration:underline;min-height:32px;cursor:pointer}
+.school-nav-group .nav-disclosure{display:flex;align-items:center;gap:9px;width:100%;min-height:44px;padding:10px 8px;background:transparent;border:0;border-radius:7px;color:#d4e2eb;text-align:left;font-size:.78rem;cursor:pointer}
+.school-nav-group .nav-disclosure:hover{background:#ffffff10}.school-nav-group .nav-disclosure .nav-label{flex:1}.school-nav-group .chevron{transition:transform .15s}.school-nav-group .chevron.expanded{transform:rotate(180deg)}
+.school-nav-links{padding-left:12px}.school-nav-links[hidden]{display:none}.school-nav-links a{font-size:.76rem;min-height:42px}.school-nav-links a .nav-label{white-space:normal}.sidebar button:focus-visible,.sidebar a:focus-visible{outline:2px solid #8cdbcf;outline-offset:-2px}
+@media(min-width:1001px){.sidebar-compact .sidebar-search{display:none}.sidebar-compact .school-nav-group .nav-disclosure{display:none}.sidebar-compact .school-nav-links{padding-left:0}.sidebar-compact .shell-year select{width:44px;font-size:.65rem}.sidebar-compact .shell-school-logo{max-width:44px}}
+@media(prefers-reduced-motion:reduce){.school-nav-group .chevron{transition:none}}
+
+.app-shell .shell-notifications.cc-inline-notifications{position:static;inset:auto;z-index:24}.cc-inline-notifications .shell-bell{box-shadow:none}
+
+.school-nav-direct a{display:flex;align-items:center;gap:9px;min-height:44px;padding:10px 8px;border-radius:7px;font-size:.78rem}.school-nav-direct{margin-block:4px 10px}.school-nav-direct svg{flex-shrink:0}.cc-header-actions .year-selector{max-width:190px}.cc-header-actions .year-selector select{min-width:0;max-width:180px}.cc-header-actions .year-selector span{font-size:.7rem}

@@ -28,6 +28,14 @@ test('school login filters active accounts and validates their password', async 
   await assert.rejects(service.login({ username: '9876543210', password: 'wrong', schoolSlug: 'new-school' }), /Invalid username/);
 });
 
+test('DAVI Admin login is restricted to active platform Super Admin accounts', async () => {
+  let where;
+  const service = new AuthService({ user: { findMany: async query => { where = query.where; return []; } } }, {});
+  await assert.rejects(service.login({ username: 'school-admin@example.test', password: 'test', platform: true }), /Invalid username/);
+  assert.equal(where.schoolId, null);
+  assert.deepEqual(where.roles, { some: { role: { code: 'SUPER_ADMIN' } } });
+});
+
 test('staff activation and deactivation synchronize teacher status', async () => {
   const statuses = [];
   const staff = { id: 'staff', userId: 'user' };

@@ -9,6 +9,7 @@ import {
 import * as bcrypt from 'bcryptjs';
 import { accountCreationPassword } from '../auth/development-password';
 import { PrismaService } from '../prisma/prisma.service';
+import { SchoolOnboardingService } from './school-onboarding.service';
 import {
   AddUserProfileOptionDto,
   CreateSchoolDto,
@@ -19,7 +20,7 @@ import {
 
 @Injectable()
 export class SchoolsService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(private readonly prisma: PrismaService, private readonly onboarding: SchoolOnboardingService) {}
 
   async findCurrent(schoolId: string | null) {
     if (!schoolId) throw new ForbiddenException('A school account is required.');
@@ -27,6 +28,12 @@ export class SchoolsService {
     if (!school) throw new NotFoundException(`School with id ${schoolId} not found`);
     return school;
   }
+
+  onboardingState(schoolId: string | null) { return this.onboarding.state(schoolId); }
+  completeOnboarding(schoolId: string | null, skipped = false) { return this.onboarding.complete(schoolId, skipped); }
+  saveOnboardingProgress(schoolId: string | null, step: unknown) { return this.onboarding.saveProgress(schoolId, step); }
+  resumeOnboarding(schoolId: string | null) { return this.onboarding.resume(schoolId); }
+  acknowledgeOnboardingWelcome(schoolId: string | null) { return this.onboarding.acknowledgeWelcome(schoolId); }
 
   async updateCurrent(schoolId: string | null, data: UpdateSchoolDto) {
     if (!schoolId) throw new ForbiddenException('A school account is required.');
@@ -38,6 +45,7 @@ export class SchoolsService {
       ...(data.state !== undefined ? { state: data.state.trim() || null } : {}),
       ...(data.country !== undefined ? { country: data.country.trim() || null } : {}),
       ...(data.phone !== undefined ? { phone: data.phone.trim() || null } : {}),
+      ...(data.landline !== undefined ? { landline: data.landline.trim() || null } : {}),
       ...(data.email !== undefined ? { email: data.email.trim().toLowerCase() || null } : {}),
       ...(data.website !== undefined ? { website: data.website.trim() || null } : {}),
     };
@@ -52,6 +60,17 @@ export class SchoolsService {
         users: true,
       },
     });
+  }
+
+  async shortNameAvailability(value: string) {
+    const requested = String(value || '').trim();
+    const slug = slugValue(this.slugify(requested));
+    if (!slug) return { available: false, slug: '', suggestion: null, message: 'Use at least one letter or number.' };
+    const taken = async (candidate: string) => Boolean(await this.prisma.school.findUnique({ where: { slug: candidate } }) || await this.prisma.schoolSlugAlias.findUnique({ where: { slug: candidate } }));
+    if (!await taken(slug)) return { available: true, slug, suggestion: null, message: `/${slug} is available.` };
+    let suffix = 2; let suggestion = `${slug}-${suffix}`;
+    while (await taken(suggestion)) { suffix += 1; suggestion = `${slug}-${suffix}`; }
+    return { available: false, slug, suggestion, message: `/${slug} is already assigned.` };
   }
 
   async findOne(id: string) {
@@ -77,6 +96,16 @@ export class SchoolsService {
     if (!data.shortName?.trim()) {
       throw new BadRequestException('School short name is required for the school URL');
     }
+    const schoolPhone = String(data.phone || '').trim().replace(/[\s()-]/g, '');
+    const schoolLandline = String(data.landline || '').trim().replace(/[\s()-]/g, '');
+    const validMobile = !schoolPhone || /^\+?[1-9]\d{9,14}$/.test(schoolPhone);
+    const validLandline = !schoolLandline || /^\+?\d{6,15}$/.test(schoolLandline);
+    if ((!schoolPhone && !schoolLandline) || !validMobile || !validLandline) {
+      throw new BadRequestException('Enter a valid school mobile number or landline number.');
+    }
+    const programs=[...new Set((data.programs||[]).map(code=>String(code).trim().toUpperCase()))];
+    const supported=new Set(['MONTESSORI','PRE_PRIMARY','PRIMARY','MIDDLE_SCHOOL','SECONDARY','HIGHER_SECONDARY']);
+    if(!programs.length||programs.some(code=>!supported.has(code)))throw new BadRequestException('Select at least one supported school program.');
 
     const adminEmail = data.adminEmail.trim().toLowerCase();
     const existingAdmin = await this.prisma.user.findFirst({
@@ -90,78 +119,26 @@ export class SchoolsService {
     }
 
     const normalizedName = data.name.trim();
-    const existingSchool = await this.prisma.school.findFirst({
-      where: { name: normalizedName },
-    });
-
-    if (existingSchool) {
-      throw new BadRequestException(`School with name "${normalizedName}" already exists`);
-    }
+    if(normalizedName.length<2)throw new BadRequestException('School name must contain at least two characters.');
 
     const slug = await this.createSchoolSlug(data.shortName);
-    const school = await this.prisma.school.create({
-      data: {
-        name: normalizedName,
-        shortName: data.shortName,
-        slug,
-        address: data.address,
-        city: data.city,
-        state: data.state,
-        country: data.country || 'India',
-        phone: data.phone,
-        email: data.email,
-        website: data.website,
-      },
-    });
-
     const tempPassword = this.generateTemporaryPassword();
     const passwordHash = await bcrypt.hash(tempPassword, 10);
-
-    const adminUser = await this.prisma.user.create({
-      data: {
-        schoolId: school.id,
-        email: adminEmail,
-        username: adminEmail,
-        passwordHash,
-        firstName: data.adminFirstName ?? 'School',
-        lastName: data.adminLastName ?? 'Admin',
-        phone: data.phone,
-        mustChangePassword: true,
-      },
-    });
-
-    const schoolAdminRole = await this.prisma.role.create({
-      data: { schoolId: school.id, name: 'School Admin', code: 'SCHOOL_ADMIN', isSystem: true },
-    });
-
-    const permissions = await this.prisma.permission.findMany({ select: { id: true } });
-    if (permissions.length) {
-      await this.prisma.rolePermission.createMany({
-        data: permissions.map((permission) => ({ roleId: schoolAdminRole.id, permissionId: permission.id })),
-        skipDuplicates: true,
-      });
-    }
-
-    await this.prisma.userRole.upsert({
-      where: {
-        userId_roleId: {
-          userId: adminUser.id,
-          roleId: schoolAdminRole.id,
-        },
-      },
-      update: {},
-      create: {
-        userId: adminUser.id,
-        roleId: schoolAdminRole.id,
-        schoolId: school.id,
-      },
+    const {school,adminUser}=await this.prisma.$transaction(async tx=>{
+      const school=await tx.school.create({data:{name:normalizedName,shortName:data.shortName.trim(),slug,address:data.address,city:data.city,state:data.state,country:data.country||'India',phone:schoolPhone||null,...(schoolLandline?{landline:schoolLandline}:{}),email:data.email,website:data.website,programEntitlements:{create:programs.map(code=>({code:code as any}))},onboarding:{create:{}}} as any});
+      const adminUser=await tx.user.create({data:{schoolId:school.id,email:adminEmail,username:adminEmail,passwordHash,firstName:data.adminFirstName?.trim()||'School',lastName:data.adminLastName?.trim()||'Admin',phone:schoolPhone||null,mustChangePassword:true}});
+      const schoolAdminRole=await tx.role.create({data:{schoolId:school.id,name:'School Admin',code:'SCHOOL_ADMIN',isSystem:true}});
+      const permissions=await tx.permission.findMany({select:{id:true}});
+      if(permissions.length)await tx.rolePermission.createMany({data:permissions.map(permission=>({roleId:schoolAdminRole.id,permissionId:permission.id})),skipDuplicates:true});
+      await tx.userRole.create({data:{userId:adminUser.id,roleId:schoolAdminRole.id,schoolId:school.id}});
+      return {school,adminUser};
     });
 
     const loginPath = `/school/${school.slug}/login`;
     const frontendUrl = (process.env.FRONTEND_URL ?? 'http://localhost:3000').replace(/\/$/, '');
 
     return {
-      message: 'School and school admin created successfully',
+      message: 'School and school admin created successfully. Academic structure will be completed during first login.',
       school,
       admin: {
         id: adminUser.id,

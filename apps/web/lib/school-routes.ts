@@ -1,5 +1,5 @@
 ﻿/** School URLs use the existing unique slug, not a mutable display label. */
-const roots = ['dashboard','academics','admissions','students','people','operations','my-day','reports','access','school','parent','change-password','forbidden'];
+const roots = ['dashboard','academics','admissions','students','people','operations','my-day','reports','access','school','parent','change-password','forbidden','welcome','onboarding'];
 export function schoolRoute(path: string) {
  const match = /^\/school\/([^/]+)(\/.*)?$/.exec(path);
  // /school/profile and /school/settings are legacy unprefixed pages.

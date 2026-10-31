@@ -1,6 +1,7 @@
 import { SchoolExperienceModule } from './school-experience/school-experience.module';
 import { StudentMigrationModule } from './student-migration/student-migration.module';
 import { Module } from '@nestjs/common';
+import { EngagementModule } from './engagement/engagement.module';
 import { WorkflowModule } from './academic-workflow/workflow.module';
 import { APP_INTERCEPTOR } from '@nestjs/core';
 import { AppController } from './app.controller';
@@ -35,9 +36,11 @@ import { ClassroomManagementModule } from './classroom-management/classroom-mana
 import { PeriodTemplatesModule } from './period-templates/period-templates.module';
 import { AiModule } from './ai/ai.module';
 import { SyllabusModule } from './syllabus/syllabus.module';
+import { PlatformModule } from './platform/platform.module';
 
 @Module({
   imports: [
+    EngagementModule,
     WorkflowModule,
     SchoolExperienceModule,
     StudentMigrationModule,
@@ -70,6 +73,7 @@ import { SyllabusModule } from './syllabus/syllabus.module';
     PeriodTemplatesModule,
     AiModule,
     SyllabusModule,
+    PlatformModule,
   ],
   controllers: [AppController],
   providers: [AppService, { provide: APP_INTERCEPTOR, useClass: AuditInterceptor }],

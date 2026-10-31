@@ -2,8 +2,9 @@ import { Injectable, UnauthorizedException, BadRequestException } from '@nestjs/
 import { JwtService } from '@nestjs/jwt';
 import { Prisma } from '@prisma/client';
 import * as bcrypt from 'bcryptjs';
+import { createHash } from 'crypto';
 import { PrismaService } from '../prisma/prisma.service';
-import { ChangePasswordDto, LoginDto, RegisterDto } from './auth.dto';
+import { ChangePasswordDto, CompletePlatformPasswordResetDto, LoginDto, RegisterDto } from './auth.dto';
 
 @Injectable()
 export class AuthService {
@@ -128,13 +129,24 @@ export class AuthService {
     };
   }
 
+  async completePlatformPasswordReset(dto: CompletePlatformPasswordResetDto) {
+    if (!dto.token?.trim() || !dto.newPassword || dto.newPassword.length < 12) throw new BadRequestException('Use the reset link and a password of at least 12 characters.');
+    const db: any = this.prisma; const tokenHash = createHash('sha256').update(dto.token.trim()).digest('hex');
+    const reset = await db.platformPasswordReset.findUnique({ where: { tokenHash }, include: { user: { include: { roles: { include: { role: true } } } } } });
+    if (!reset || reset.usedAt || reset.expiresAt <= new Date() || reset.user.schoolId || !reset.user.roles.some((entry:any) => entry.role.code === 'SUPER_ADMIN')) throw new BadRequestException('This password reset link is invalid or has expired.');
+    const passwordHash = await bcrypt.hash(dto.newPassword, 10);
+    await db.$transaction(async (tx:any) => { const consumed = await tx.platformPasswordReset.updateMany({ where: { id: reset.id, usedAt: null }, data: { usedAt: new Date() } }); if (consumed.count !== 1) throw new BadRequestException('This password reset link has already been used.'); await tx.user.update({ where: { id: reset.userId }, data: { passwordHash, mustChangePassword: false } }); });
+    return { message: 'Password reset successfully. You can now sign in to DAVI.' };
+  }
+
   async login(dto: LoginDto) {
+    if (dto.platform && (dto.schoolId || dto.schoolSlug)) throw new BadRequestException('DAVI Admin sign-in cannot be combined with a school login.');
     if(dto.schoolSlug){const key=dto.schoolSlug.trim().toLowerCase();const alias=await this.prisma.schoolSlugAlias.findUnique({where:{slug:key}});if(alias){const school=await this.prisma.school.findUnique({where:{id:alias.schoolId},select:{slug:true}});if(school)dto={...dto,schoolSlug:school.slug};}}
 
     const identifier = dto.username?.trim() || dto.email?.trim().toLowerCase();
     if (!identifier) throw new BadRequestException('Email or username is required.');
     const users = await this.prisma.user.findMany({
-      where: { status: 'ACTIVE', ...(dto.schoolId ? { schoolId: dto.schoolId } : {}), ...(dto.schoolSlug ? { school: { slug: dto.schoolSlug.trim().toLowerCase() } } : {}), OR: [{ email: identifier }, { username: identifier }] },
+      where: { status: 'ACTIVE', ...(dto.platform ? { schoolId: null, roles: { some: { role: { code: 'SUPER_ADMIN' } } } } : {}), ...(dto.schoolId ? { schoolId: dto.schoolId } : {}), ...(dto.schoolSlug ? { school: { slug: dto.schoolSlug.trim().toLowerCase() } } : {}), OR: [{ email: identifier }, { username: identifier }] },
       take: 2,
       include: {
         school: true,

@@ -1,0 +1,13 @@
+2026-10-30 18:34:07.431 IST [18840] LOG:  starting PostgreSQL 18.4 on x86_64-windows, compiled by msvc-19.44.35227, 64-bit
+2026-10-30 18:34:07.432 IST [18840] LOG:  listening on IPv4 address "127.0.0.1", port 55439
+2026-10-30 18:34:07.491 IST [10056] LOG:  database system was shut down at 2026-10-30 18:27:47 IST
+2026-10-30 18:34:07.504 IST [18840] LOG:  database system is ready to accept connections
+2026-10-30 18:34:07.510 IST [23548] FATAL:  the database system is starting up
+2026-10-30 18:34:23.318 IST [28504] FATAL:  role "CodexSandboxOffline" does not exist
+2026-10-30 18:36:38.877 IST [18840] LOG:  received fast shutdown request
+2026-10-30 18:36:38.880 IST [18840] LOG:  aborting any active transactions
+2026-10-30 18:36:38.895 IST [18840] LOG:  background worker "logical replication launcher" (PID 23028) exited with exit code 1
+2026-10-30 18:36:38.897 IST [20168] LOG:  shutting down
+2026-10-30 18:36:38.900 IST [20168] LOG:  checkpoint starting: shutdown immediate
+2026-10-30 18:36:39.116 IST [20168] LOG:  checkpoint complete: wrote 192 buffers (1.2%), wrote 2 SLRU buffers; 0 WAL file(s) added, 0 removed, 0 recycled; write=0.057 s, sync=0.151 s, total=0.219 s; sync files=142, longest=0.005 s, average=0.002 s; distance=1011 kB, estimate=1011 kB; lsn=0/2261C88, redo lsn=0/2261C88
+2026-10-30 18:36:39.239 IST [18840] LOG:  database system is shut down

@@ -5,11 +5,12 @@ import { useAuth } from '../lib/auth-context';
 import { useAcademicYear } from '../lib/academic-year-context';
 import { useToast } from '../lib/toast-context';
 import { EmptyState, ErrorState, Field, FormActions, LoadingState, Modal, PageHeader, StatusBadge } from './ui';
+import Link from '../lib/school-navigation';
 import { AdmissionSettings } from './admission-settings';
 import { AdmissionApplicationDetail } from './admission-application-detail';
 
 export type AdmissionsView = 'dashboard' | 'enquiries' | 'follow-ups' | 'applications' | 'decisions' | 'joining' | 'settings';
-const titles: Record<AdmissionsView,string> = { dashboard: 'Admissions overview', enquiries: 'Enquiries', 'follow-ups': 'Follow-ups', applications: 'Admissions', decisions: 'Admission decisions', joining: 'Joined / Not Joined', settings: 'Admission settings' };
+const titles: Record<AdmissionsView,string> = { dashboard: 'Admissions Overview', enquiries: 'Enquiries & Follow-ups', 'follow-ups': 'Enquiries & Follow-ups', applications: 'Applications & Admissions', decisions: 'Admission decisions', joining: 'Joined / Not Joined', settings: 'Admission Settings' };
 export const admissionMoney = (minor: number) => (minor / 100).toLocaleString('en-IN', { style: 'currency', currency: 'INR' });
 export const admissionDate = (value: string | null) => value ? new Date(value).toLocaleString('en-IN') : 'Not scheduled';
 const primaryParent = () => ({ firstName: '', lastName: '', mobile: '', email: '', relationship: 'GUARDIAN', isPrimary: true });
@@ -64,6 +65,7 @@ export function AdmissionsWorkspace({ view }: { view: AdmissionsView }) {
   const statuses = enquiryView ? ['NEW','CONTACTED','INTERESTED','NOT_INTERESTED','FOLLOW_UP_REQUIRED','APPLICATION_STARTED','CONVERTED','CLOSED'] : ['PENDING','ADMITTED'];
   if (!lookups) return error ? <ErrorState message={error}/> : <LoadingState/>;
   return <><PageHeader title={titles[view]} description="Register enquiries, carry their details into admissions, then confirm enrollment." action={can('ADMISSIONS_MANAGE') && year && view !== 'settings' ? <div className="button-row"><button className="button secondary" onClick={openEnquiry}>New enquiry</button><button className="button" onClick={() => openApplication()}>New admission</button></div> : undefined}/>
+    {enquiryView&&<nav className="workspace-tabs" aria-label="Enquiries and follow-ups"><Link href="/admissions/enquiries" aria-current={view==='enquiries'?'page':undefined}>All enquiries</Link><Link href="/admissions/follow-ups" aria-current={view==='follow-ups'?'page':undefined}>Follow-ups</Link></nav>}
     {view === 'settings' ? <AdmissionSettings lookups={lookups} onSaved={settings => setLookups({ ...lookups, settings })}/> : <>
       <section className="card admission-filters"><Field label="Academic year"><select value={year} onChange={event => { setYear(event.target.value); setClassId(''); setPage(1); }}>{lookups.years.map((row:any) => <option key={row.id} value={row.id}>{row.name}{row.isCurrent ? ' · Current' : ''}</option>)}</select></Field><Field label="Class"><select value={classId} onChange={event => { setClassId(event.target.value); setPage(1); }}><option value="">All classes</option>{classes.map((row:any) => <option key={row.id} value={row.id}>{row.name}</option>)}</select></Field>
       {view !== 'dashboard' && <><Field label="Search"><input type="search" placeholder="Name, number or mobile" value={query} onChange={event => { setQuery(event.target.value); setPage(1); }}/></Field><Field label="Status"><select value={status} onChange={event => { setStatus(event.target.value); setPage(1); }}><option value="">All statuses</option>{statuses.map(value => <option key={value}>{value}</option>)}</select></Field></>}

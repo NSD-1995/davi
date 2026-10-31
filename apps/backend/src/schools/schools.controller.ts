@@ -41,6 +41,48 @@ export class SchoolsController {
     return this.schoolsService.updateCurrent(req.user.schoolId, dto);
   }
 
+  @Get('me/onboarding')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @RequireRoles('school-admin')
+  onboardingState(@Req() req: any) {
+    return this.schoolsService.onboardingState(req.user.schoolId);
+  }
+
+  @Post('me/onboarding/complete')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @RequireRoles('school-admin')
+  completeOnboarding(@Req() req: any) {
+    return this.schoolsService.completeOnboarding(req.user.schoolId, false);
+  }
+
+  @Post('me/onboarding/skip')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @RequireRoles('school-admin')
+  skipOnboarding(@Req() req: any) {
+    return this.schoolsService.completeOnboarding(req.user.schoolId, true);
+  }
+
+  @Post('me/onboarding/progress')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @RequireRoles('school-admin')
+  onboardingProgress(@Req() req: any, @Body() body: { step?: number }) {
+    return this.schoolsService.saveOnboardingProgress(req.user.schoolId, body?.step);
+  }
+
+  @Post('me/onboarding/resume')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @RequireRoles('school-admin')
+  resumeOnboarding(@Req() req: any) {
+    return this.schoolsService.resumeOnboarding(req.user.schoolId);
+  }
+
+  @Post('me/onboarding/welcome-shown')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @RequireRoles('school-admin')
+  acknowledgeOnboardingWelcome(@Req() req: any) {
+    return this.schoolsService.acknowledgeOnboardingWelcome(req.user.schoolId);
+  }
+
   @Post()
   @UseGuards(JwtAuthGuard, RolesGuard)
   @RequireRoles('super-admin')
@@ -53,6 +95,13 @@ export class SchoolsController {
   @RequireRoles('super-admin')
   findAll() {
     return this.schoolsService.findAll();
+  }
+
+  @Get('short-name-availability')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @RequireRoles('super-admin')
+  shortNameAvailability(@Req() req: any) {
+    return this.schoolsService.shortNameAvailability(String(req.query?.value || ''));
   }
 
   @Get(':id')

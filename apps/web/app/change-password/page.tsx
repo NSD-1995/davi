@@ -3,7 +3,7 @@
 import { useState, type FormEvent } from 'react';
 import { useRouter } from '../../lib/school-navigation';
 import { authApi, ApiError } from '../../lib/api';
-import { dashboardPathFor, useAuth } from '../../lib/auth-context';
+import { useAuth } from '../../lib/auth-context';
 
 export default function ChangePasswordPage() {
   const { session, loading, refresh, logout } = useAuth();
@@ -19,7 +19,7 @@ export default function ChangePasswordPage() {
     if (next.length < 8) return setError('New password must contain at least 8 characters.');
     if (next !== confirm) return setError('New passwords do not match.');
     setBusy(true); setError('');
-    try { await authApi.changePassword(session.token, current, next); await refresh(); router.replace(dashboardPathFor(session)); }
+    try { await authApi.changePassword(session.token, current, next); await refresh(); const schoolAdmin=session.roles.some(role=>role.code.toUpperCase()==='SCHOOL_ADMIN'); router.replace(schoolAdmin&&session.user.school?.slug?'/onboarding':'/dashboard'); }
     catch (err) { setError(err instanceof ApiError ? err.message : 'Password could not be changed.'); }
     finally { setBusy(false); }
   };

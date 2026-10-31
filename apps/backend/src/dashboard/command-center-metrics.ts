@@ -4,7 +4,7 @@ import { localClock } from '../timetable/coverage.service';
 export function studentDayState(section:any, assignments:any[], plans:any[], events:any[], date:string, timeZone:string, year:any, workingDays?:number[]) {
  const day=new Date(date+'T00:00:00Z'),weekday=day.getUTCDay()||7;
  if((year?.startDate&&date<new Date(year.startDate).toISOString().slice(0,10))||(year?.endDate&&date>new Date(year.endDate).toISOString().slice(0,10)))return 'OUTSIDE_YEAR';
- if(events.some(event=>['HOLIDAY','SCHOOL_CLOSURE'].includes(event.eventType.toUpperCase())&&['ALL','STAFF','TEACHERS','CLASS:'+section.id].includes(event.audience)&&localClock(new Date(event.startsAt),timeZone).date<=date&&date<=localClock(new Date(event.endsAt||event.startsAt),timeZone).date))return 'HOLIDAY';
+ if(events.some(event=>['HOLIDAY','SCHOOL_CLOSURE'].includes(event.eventType.toUpperCase())&&['ALL','CLASS:'+section.id].includes(event.audience)&&localClock(new Date(event.startsAt),timeZone).date<=date&&date<=localClock(new Date(event.endsAt||event.startsAt),timeZone).date))return 'HOLIDAY';
  const scoped=assignments.filter(row=>row.classId===section.classId&&(!row.sectionId||row.sectionId===section.id));
  const assignment=scoped.find(row=>row.sectionId===section.id)||scoped.find(row=>!row.sectionId);
  const days=assignment?.template?.workingDays||plans.find(p=>p.sectionId===section.id&&p.status==='PUBLISHED')?.template?.workingDays||workingDays;

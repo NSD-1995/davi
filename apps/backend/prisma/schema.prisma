@@ -36,7 +36,64 @@ enum ParentStatus {
   INACTIVE
 }
 
+enum SchoolProgramCode {
+  MONTESSORI
+  PRE_PRIMARY
+  PRIMARY
+  MIDDLE_SCHOOL
+  SECONDARY
+  HIGHER_SECONDARY
+}
+
+enum SubscriptionPlanCode {
+  BASIC
+  AI_PLUS
+  PREMIUM
+}
+enum BillingFrequency {
+  MONTHLY
+  QUARTERLY
+  YEARLY
+}
+enum SubscriptionStatus {
+  TRIAL
+  ACTIVE
+  GRACE_PERIOD
+  SUSPENDED
+  CANCELLED
+  EXPIRED
+}
+enum SubscriptionInvoiceStatus {
+  DRAFT
+  ISSUED
+  PARTIALLY_PAID
+  PAID
+  OVERDUE
+  VOID
+}
+enum SubscriptionPaymentStatus {
+  PENDING_VERIFICATION
+  CONFIRMED
+  REJECTED
+  REFUNDED
+}
+enum PlatformSupportStatus {
+  OPEN
+  IN_PROGRESS
+  WAITING_ON_SCHOOL
+  RESOLVED
+  CLOSED
+}
+enum PlatformSupportPriority {
+  LOW
+  NORMAL
+  HIGH
+  URGENT
+}
+
 model School {
+  dailyActivities DailyActivity[]
+  parentQueries ParentQuery[]
  mediaAssets MediaAsset[]
  academicTeam AcademicTeamAssignment[]
  slugAliases SchoolSlugAlias[]
@@ -61,6 +118,7 @@ model School {
   state     String?
   country   String?  @default("India")
   phone     String?
+  landline  String?
   email     String?
   website   String?
   createdAt DateTime @default(now())
@@ -107,6 +165,142 @@ model School {
   timetableSubstitutions    TimetableSubstitution[]
   periodTimingTemplates     PeriodTimingTemplate[]
   periodTemplateAssignments PeriodTemplateAssignment[]
+  programEntitlements       SchoolProgramEntitlement[]
+  onboarding                SchoolOnboarding?
+  subscriptions             SchoolSubscription[]
+  subscriptionInvoices      SubscriptionInvoice[]
+  supportTickets            PlatformSupportTicket[]
+}
+
+model SubscriptionPlan {
+  id              String               @id @default(uuid())
+  code            SubscriptionPlanCode @unique
+  name            String
+  description     String?
+  features        Json
+  monthlyAmount   Int
+  quarterlyAmount Int
+  yearlyAmount    Int
+  aiQuota         Int                  @default(0)
+  isActive        Boolean              @default(true)
+  createdAt       DateTime             @default(now())
+  updatedAt       DateTime             @updatedAt
+  subscriptions   SchoolSubscription[]
+}
+
+model SchoolSubscription {
+  id                  String              @id @default(uuid())
+  schoolId            String
+  planId              String
+  status              SubscriptionStatus  @default(TRIAL)
+  billingFrequency    BillingFrequency
+  startDate           DateTime            @db.Date
+  endDate             DateTime?           @db.Date
+  currentPeriodStart  DateTime?           @db.Date
+  currentPeriodEnd    DateTime?           @db.Date
+  nextInvoiceDate     DateTime?           @db.Date
+  priceSnapshot       Json
+  createdAt           DateTime            @default(now())
+  updatedAt           DateTime            @updatedAt
+  school              School              @relation(fields:[schoolId], references:[id], onDelete:Restrict)
+  plan                SubscriptionPlan    @relation(fields:[planId], references:[id], onDelete:Restrict)
+  invoices            SubscriptionInvoice[]
+  @@index([schoolId,status])
+}
+
+model SubscriptionInvoice {
+  id               String                    @id @default(uuid())
+  schoolId         String
+  subscriptionId   String
+  invoiceNumber    String                    @unique
+  periodStart      DateTime                  @db.Date
+  periodEnd        DateTime                  @db.Date
+  issuedAt         DateTime?
+  dueDate          DateTime                  @db.Date
+  baseAmount       Int
+  discountAmount   Int                       @default(0)
+  taxAmount        Int                       @default(0)
+  totalAmount      Int
+  status           SubscriptionInvoiceStatus @default(DRAFT)
+  createdAt        DateTime                  @default(now())
+  updatedAt        DateTime                  @updatedAt
+  school           School                    @relation(fields:[schoolId], references:[id], onDelete:Restrict)
+  subscription     SchoolSubscription        @relation(fields:[subscriptionId], references:[id], onDelete:Restrict)
+  payments         SubscriptionPayment[]
+  @@unique([subscriptionId,periodStart,periodEnd])
+  @@index([schoolId,status,dueDate])
+}
+
+model SubscriptionPayment {
+  id          String                    @id @default(uuid())
+  invoiceId   String
+  amount      Int
+  method      String
+  reference   String
+  status      SubscriptionPaymentStatus @default(PENDING_VERIFICATION)
+  paidAt      DateTime                  @db.Date
+  recordedBy  String
+  verifiedBy  String?
+  verifiedAt  DateTime?
+  notes       String?
+  createdAt   DateTime                  @default(now())
+  invoice     SubscriptionInvoice       @relation(fields:[invoiceId], references:[id], onDelete:Restrict)
+  @@unique([invoiceId,reference])
+  @@index([invoiceId,status])
+}
+
+model PlatformSupportTicket {
+  id          String                  @id @default(uuid())
+  schoolId    String?
+  school      School?                 @relation(fields:[schoolId], references:[id], onDelete:SetNull)
+  requesterEmail String
+  requesterName  String?
+  subject     String
+  status      PlatformSupportStatus   @default(OPEN)
+  priority    PlatformSupportPriority @default(NORMAL)
+  createdAt   DateTime                @default(now())
+  updatedAt   DateTime                @updatedAt
+  resolvedAt  DateTime?
+  messages    PlatformSupportMessage[]
+  @@index([schoolId,status])
+  @@index([status,priority,createdAt])
+}
+
+model PlatformSupportMessage {
+  id        String                @id @default(uuid())
+  ticketId  String
+  ticket    PlatformSupportTicket @relation(fields:[ticketId], references:[id], onDelete:Cascade)
+  authorId  String?
+  authorName String?
+  body      String
+  internal  Boolean               @default(false)
+  createdAt DateTime              @default(now())
+  @@index([ticketId,createdAt])
+}
+
+model SchoolProgramEntitlement {
+  id        String            @id @default(uuid())
+  schoolId  String
+  code      SchoolProgramCode
+  version   Int               @default(1)
+  enabledAt DateTime          @default(now())
+  enabledBy String?
+  school    School            @relation(fields: [schoolId], references: [id], onDelete: Cascade)
+
+  @@unique([schoolId, code])
+  @@index([schoolId])
+}
+
+model SchoolOnboarding {
+  id          String   @id @default(uuid())
+  schoolId    String   @unique
+  status      String   @default("PENDING")
+  completedAt DateTime?
+  welcomeShownAt DateTime?
+  onboardingCurrentStep Int @default(1)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  school      School   @relation(fields: [schoolId], references: [id], onDelete: Cascade)
 }
 
 model Role {
@@ -150,6 +344,8 @@ model RolePermission {
 }
 
 model User {
+  assignedParentQueries ParentQuery[]
+  parentQueryMessages ParentQueryMessage[]
  ownedMedia MediaAsset[] @relation("MediaOwner")
  analyticsSnapshots AnalyticsSnapshot[]
  analyticsExports AnalyticsExportJob[]
@@ -175,6 +371,8 @@ model User {
   createdAt          DateTime   @default(now())
   updatedAt          DateTime   @updatedAt
 
+  platformPasswordResets PlatformPasswordReset[]
+
   roles                   UserRole[]
   profileOptions          UserSchoolProfileOption[]
   student                 Student?
@@ -196,6 +394,26 @@ model User {
   auditLogs               AuditLog[]                @relation("AuditActor")
   createdPeriodTemplates  PeriodTimingTemplate[]    @relation("PeriodTemplateCreator")
   updatedPeriodTemplates  PeriodTimingTemplate[]    @relation("PeriodTemplateUpdater")
+}
+
+model PlatformPasswordReset {
+  id          String   @id @default(uuid())
+  userId      String
+  user        User     @relation(fields:[userId], references:[id], onDelete:Cascade)
+  tokenHash   String   @unique
+  expiresAt   DateTime
+  usedAt      DateTime?
+  requestedBy String?
+  createdAt   DateTime @default(now())
+  @@index([userId,expiresAt])
+}
+
+model PlatformSetting {
+  key       String   @id
+  value     Json
+  updatedBy String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 }
 
 model UserRole {
@@ -342,6 +560,7 @@ model AcademicYear {
 }
 
 model SchoolClass {
+  dailyActivities DailyActivity[]
   admissionEnquiries AdmissionEnquiry[]
   admissionApplications AdmissionApplication[]
   movementsFrom EnrollmentMovement[] @relation("MovementFromClass")
@@ -372,6 +591,7 @@ model SchoolClass {
 }
 
 model Section {
+  dailyActivities DailyActivity[]
   admissionApplications AdmissionApplication[]
   movementsFrom EnrollmentMovement[] @relation("MovementFromSection")
   movementsTo EnrollmentMovement[] @relation("MovementToSection")
@@ -558,6 +778,7 @@ model Student {
 }
 
 model StudentEnrollment {
+  parentQueries ParentQuery[]
  analyticsAttentionCases AnalyticsAttentionCase[]
  @@unique([id,schoolId,academicYearId])
  assessmentObservations AssessmentObservation[]
@@ -642,6 +863,7 @@ model StaffAttendance {
 }
 
 model Teacher {
+  dailyActivities DailyActivity[]
   id                  String                      @id @default(uuid())
   userId              String                      @unique
   schoolId            String
@@ -1516,6 +1738,7 @@ model AcademicInsight {
 }
 
 model Parent {
+  queries ParentQuery[]
   id                    String   @id @default(uuid())
   userId                String   @unique
   user                  User     @relation(fields: [userId], references: [id], onDelete: Cascade)
@@ -1886,4 +2109,63 @@ model SchoolSlugAlias {
  schoolId String
  createdAt DateTime @default(now())
  @@index([schoolId])
+}
+
+model DailyActivity {
+  id String @id @default(uuid())
+  schoolId String
+  academicYearId String
+  classId String
+  sectionId String
+  teacherId String
+  title String
+  category String
+  description String?
+  date DateTime @db.Date
+  startTime String?
+  endTime String?
+  status String @default("PLANNED")
+  version Int @default(1)
+  completedAt DateTime?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  school School @relation(fields:[schoolId],references:[id],onDelete:Restrict)
+  schoolClass SchoolClass @relation(fields:[classId],references:[id],onDelete:Restrict)
+  section Section @relation(fields:[sectionId],references:[id],onDelete:Restrict)
+  teacher Teacher @relation(fields:[teacherId],references:[id],onDelete:Restrict)
+  @@index([schoolId, academicYearId, date, sectionId])
+  @@index([schoolId, teacherId, date])
+}
+model ParentQuery {
+  id String @id @default(uuid())
+  schoolId String
+  enrollmentId String
+  parentId String
+  assignedToId String?
+  category String
+  subject String
+  status String @default("NEW")
+  dueAt DateTime
+  resolvedAt DateTime?
+  version Int @default(1)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  school School @relation(fields:[schoolId],references:[id],onDelete:Restrict)
+  enrollment StudentEnrollment @relation(fields:[enrollmentId],references:[id],onDelete:Restrict)
+  parent Parent @relation(fields:[parentId],references:[id],onDelete:Restrict)
+  assignedTo User? @relation(fields:[assignedToId],references:[id],onDelete:Restrict)
+  messages ParentQueryMessage[]
+  @@index([schoolId, status, dueAt])
+  @@index([schoolId, assignedToId, status])
+  @@index([parentId, enrollmentId])
+}
+model ParentQueryMessage {
+  id String @id @default(uuid())
+  queryId String
+  authorId String
+  message String
+  createdAt DateTime @default(now())
+  query ParentQuery @relation(fields:[queryId],references:[id],onDelete:Restrict)
+  author User @relation(fields:[authorId],references:[id],onDelete:Restrict)
+  @@index([queryId, createdAt])
 }

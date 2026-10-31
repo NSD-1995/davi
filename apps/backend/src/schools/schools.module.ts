@@ -6,6 +6,7 @@ import { PermissionsGuard } from '../auth/permissions.guard';
 import { PrismaModule } from '../prisma/prisma.module';
 import { SchoolsController } from './schools.controller';
 import { SchoolsService } from './schools.service';
+import { SchoolOnboardingService } from './school-onboarding.service';
 
 @Module({
   imports: [
@@ -16,7 +17,7 @@ import { SchoolsService } from './schools.service';
     }),
   ],
   controllers: [SchoolsController],
-  providers: [SchoolsService, JwtAuthGuard, RolesGuard, PermissionsGuard],
+  providers: [SchoolsService, SchoolOnboardingService, JwtAuthGuard, RolesGuard, PermissionsGuard],
   exports: [SchoolsService],
 })
 export class SchoolsModule {}

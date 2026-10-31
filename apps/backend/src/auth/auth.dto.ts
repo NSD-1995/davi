@@ -13,6 +13,7 @@ export class RegisterDto {
 export class LoginDto {
   schoolId?: string;
   schoolSlug?: string;
+  platform?: boolean;
   email?: string;
   username?: string;
   password!: string;
@@ -20,5 +21,9 @@ export class LoginDto {
 
 export class ChangePasswordDto {
   currentPassword!: string;
+  newPassword!: string;
+}
+export class CompletePlatformPasswordResetDto {
+  token!: string;
   newPassword!: string;
 }
